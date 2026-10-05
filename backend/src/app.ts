@@ -11,9 +11,13 @@ export function createApp(): express.Express {
   app.use(cookieParser());
 
   app.get('/health', (_req, res) => {
-    res.status(200).json(healthResponseSchema.parse({
-      status: 'ok', service: 'leetsync-api', version: '0.1.0',
-    }));
+    res.status(200).json(
+      healthResponseSchema.parse({
+        status: 'ok',
+        service: 'leetsync-api',
+        version: '0.1.0',
+      }),
+    );
   });
   return app;
 }

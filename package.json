@@ -3,20 +3,24 @@
   "private": true,
   "version": "0.1.0",
   "description": "LeetSync foundation monorepo",
-  "workspaces": ["backend", "shared"],
+  "workspaces": [
+    "backend",
+    "shared"
+  ],
   "scripts": {
-    "dev:api": "npm run dev -w backend",
-    "dev:worker": "npm run worker -w backend",
-    "build": "npm run build -ws",
-    "typecheck": "npm run typecheck -ws",
-    "lint": "npm run lint -ws",
+    "dev:api": "npm run build -w shared && cd backend && npm run dev",
+    "dev:worker": "npm run build -w shared && cd backend && npm run worker",
+    "build": "npm run build -w shared && cd backend && npm run build",
+    "typecheck": "npm run typecheck -w shared && npm run build -w shared && cd backend && npm run typecheck",
+    "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "test": "npm run test -w backend",
-    "db:generate": "npm run prisma:generate -w backend",
-    "db:migrate": "npm run prisma:migrate -w backend",
-    "db:deploy": "npm run prisma:deploy -w backend",
-    "ci": "npm run lint && npm run typecheck && npm test && npm run build && npm run format:check"
+    "test": "npm run build -w shared && cd backend && npm run test",
+    "db:generate": "cd backend && npm run prisma:generate",
+    "db:migrate": "cd backend && npm run prisma:migrate",
+    "db:deploy": "cd backend && npm run prisma:deploy",
+    "ci": "npm run lint && npm run typecheck && npm test && npm run build && npm run format:check",
+    "postinstall": "npm run build -w shared"
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",
@@ -26,5 +30,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

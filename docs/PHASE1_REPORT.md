@@ -32,8 +32,20 @@ The execution environment has no DNS/network access to the npm registry, so `npm
 - ESLint execution using installed project dependencies
 - Docker Compose startup
 
+## Validation discovered on Windows 8.1 / Node 22.22.3 / npm 8.19.4
+
+The first extracted build exposed three integration issues in the workspace scripts:
+
+1. Workspace-local `eslint` invocation was not resolving the root ESLint binary under this npm/workspace setup.
+2. Backend type-check/tests could resolve `@leetsync/shared` only after the shared package had been built to `dist`.
+3. The initial workspace configuration caused the root test invocation to attempt a missing `test` script in `shared`.
+
+Phase 1 was patched to build `shared` before backend operations, run lint from the repository root, provide a shared test script, and add `@types/supertest`. The `.npmrc` workspace override was also removed so workspace behavior comes solely from `package.json`.
+
 ## Phase 1 exit status
 
-**IMPLEMENTATION READY — ENVIRONMENT VALIDATION BLOCKED.**
+**PENDING LOCAL VALIDATION AFTER PATCH — NOT YET COMPLETE.**
+
+The strict exit criterion still requires the patched project to pass the local lint/type-check/test/build/format checks and, where Docker is available, `docker compose up --build`. No claim of completion is made until those checks pass on the user's machine/CI.
 
 The foundation files are complete, but the strict project exit criterion requires a real `docker compose up --build` plus green CI/local checks. Those runtime checks must be performed in an environment with Docker and npm registry access.

@@ -11,6 +11,7 @@ This phase establishes the monorepo, TypeScript toolchain, PostgreSQL database, 
 ```bash
 cp .env.example .env
 npm install
+
 docker compose up --build
 ```
 
@@ -19,10 +20,10 @@ API health: `http://localhost:3000/health`
 Expected response:
 
 ```json
-{"status":"ok","service":"leetsync-api","version":"0.1.0"}
+{ "status": "ok", "service": "leetsync-api", "version": "0.1.0" }
 ```
 
-### Run checks
+### Run checks (from the repository root)
 
 ```bash
 npm run lint

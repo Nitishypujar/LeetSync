@@ -7,5 +7,6 @@ RUN npm install
 COPY tsconfig.base.json eslint.config.js .prettierrc.json ./
 COPY backend backend
 COPY shared shared
+RUN npm run build -w shared
 RUN npm run db:generate -w backend
 CMD ["npm", "run", "dev:api"]

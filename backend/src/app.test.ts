@@ -6,6 +6,10 @@ describe('GET /health', () => {
   it('returns the shared-schema health response', async () => {
     const response = await request(createApp()).get('/health');
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ status: 'ok', service: 'leetsync-api', version: '0.1.0' });
+    expect(response.body).toEqual({
+      status: 'ok',
+      service: 'leetsync-api',
+      version: '0.1.0',
+    });
   });
 });
