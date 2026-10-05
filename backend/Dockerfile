@@ -2,11 +2,15 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package.json .npmrc ./
+# Copy workspace manifests and lockfile first for reproducible dependency installation.
+COPY package.json package-lock.json .npmrc ./
 COPY backend/package.json backend/package.json
 COPY shared/package.json shared/package.json
 
-RUN npm install
+# The root package has a postinstall hook that builds the shared package.
+# During the image dependency layer, the shared source/config has not been copied yet,
+# so skip lifecycle scripts and run the build explicitly after copying the source.
+RUN npm ci --ignore-scripts
 
 COPY tsconfig.base.json eslint.config.js .prettierrc.json ./
 COPY backend backend
