@@ -30,7 +30,7 @@ jobs:
       - name: Create CI environment
         shell: bash
         run: |
-          cat > .env <<'EOF'
+          cat > .env <<'EOF_ENV'
           NODE_ENV=development
           PORT=3000
           DATABASE_URL=postgresql://leetsync:leetsync@postgres:5432/leetsync?schema=public
@@ -40,7 +40,7 @@ jobs:
           GITHUB_CLIENT_SECRET=ci-placeholder
           GITHUB_CALLBACK_URL=http://localhost:3000/api/auth/github/callback
           FRONTEND_ORIGIN=http://localhost:5173
-          EOF
+          EOF_ENV
 
       - name: Build containers
         run: docker compose build
@@ -48,8 +48,11 @@ jobs:
       - name: Start PostgreSQL
         run: docker compose up -d postgres
 
-      - name: Apply database migration
-        run: docker compose run --rm api npm run db:deploy
+      - name: Apply database migrations
+        run: docker compose run --rm api npm run db:deploy -w backend
+
+      - name: Run database identity test
+        run: docker compose run --rm -e RUN_DB_TESTS=true api npm run test:db -w backend
 
       - name: Start API and worker
         run: docker compose up -d api worker

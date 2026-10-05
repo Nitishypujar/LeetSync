@@ -14,4 +14,9 @@ const envSchema = z.object({
   FRONTEND_ORIGIN: z.string().url(),
 });
 
-export const env = envSchema.parse(process.env);
+let parsedEnv: z.infer<typeof envSchema> | undefined;
+
+export function getEnv(): z.infer<typeof envSchema> {
+  parsedEnv ??= envSchema.parse(process.env);
+  return parsedEnv;
+}

@@ -5,39 +5,38 @@ services:
       POSTGRES_USER: leetsync
       POSTGRES_PASSWORD: leetsync
       POSTGRES_DB: leetsync
-    ports:
-      - '5432:5432'
+    ports: ['5432:5432']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U leetsync -d leetsync']
       interval: 5s
       timeout: 5s
       retries: 20
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    volumes: [postgres_data:/var/lib/postgresql/data]
 
   api:
     build: { context: ., dockerfile: backend/Dockerfile }
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://leetsync:leetsync@postgres:5432/leetsync?schema=public
+    env_file: [.env]
     depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - '3000:3000'
-    command: ['npm', 'run', 'dev:api']
+      postgres: { condition: service_healthy }
+    ports: ['3000:3000']
+    command:
+      [
+        'sh',
+        '-c',
+        'cp /app/.env /app/backend/.env && npm run db:deploy -w backend && npm run dev:api',
+      ]
 
   worker:
     build: { context: ., dockerfile: backend/Dockerfile }
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://leetsync:leetsync@postgres:5432/leetsync?schema=public
+    env_file: [.env]
     depends_on:
-      postgres:
-        condition: service_healthy
-    command: ['npm', 'run', 'dev:worker']
+      postgres: { condition: service_healthy }
+    command:
+      [
+        'sh',
+        '-c',
+        'cp /app/.env /app/backend/.env && npm run db:deploy -w backend && npm run dev:worker',
+      ]
 
 volumes:
   postgres_data:

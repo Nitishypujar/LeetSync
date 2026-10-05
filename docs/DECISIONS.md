@@ -25,3 +25,25 @@ The backend imports `@leetsync/shared` through the package's built `dist` export
 ### Root-level lint
 
 Run ESLint from the repository root rather than relying on workspace-local PATH resolution. This avoids an npm 8 Windows workspace binary-resolution issue observed during Phase 1 validation.
+
+## Phase 2 — GitHub authentication
+
+### GitHub OAuth over email/password
+
+GitHub OAuth is the sole login mechanism. The backend validates OAuth state, exchanges the authorization code server-side, and revalidates the authenticated GitHub identity through the `/user` API.
+
+### Database-backed sessions
+
+Sessions are stored as SHA-256 hashes of high-entropy random tokens. The raw token exists only in the HttpOnly session cookie. This supports explicit revocation and persistent login state without exposing session identifiers in the database.
+
+### Token encryption
+
+GitHub access and refresh tokens are encrypted with AES-256-GCM using a 32-byte key supplied through environment configuration. Plaintext tokens are never returned to the frontend.
+
+### CSRF
+
+OAuth uses the OAuth `state` parameter plus a SameSite cookie. Authenticated POST requests such as logout use a separate double-submit CSRF token.
+
+### GitHub scope
+
+The OAuth request uses `public_repo`, which is sufficient for the planned public LeetCode solutions repository. Private-repository support can justify broader scope later.

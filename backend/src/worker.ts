@@ -1,5 +1,7 @@
-import { env } from './config.js';
+import { getEnv } from './config.js';
+import { prisma } from './db.js';
 
+const env = getEnv();
 console.log(
   JSON.stringify({
     level: 'info',
@@ -8,7 +10,7 @@ console.log(
   }),
 );
 
-const shutdown = (signal: string) => {
+const shutdown = async (signal: string): Promise<void> => {
   console.log(
     JSON.stringify({
       level: 'info',
@@ -16,7 +18,9 @@ const shutdown = (signal: string) => {
       signal,
     }),
   );
+  await prisma.$disconnect();
   process.exit(0);
 };
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+process.on('SIGINT', () => void shutdown('SIGINT'));
+process.on('SIGTERM', () => void shutdown('SIGTERM'));

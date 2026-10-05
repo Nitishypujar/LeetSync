@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.1.0",
   "description": "LeetSync foundation monorepo",
-  "type": "module",
   "workspaces": [
     "backend",
     "shared"
@@ -33,5 +32,6 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "type": "module"
 }
