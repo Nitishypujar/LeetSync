@@ -49,7 +49,7 @@ jobs:
         run: docker compose up -d postgres
 
       - name: Apply database migration
-        run: docker compose run --rm api npm run db:deploy -w backend
+        run: docker compose run --rm api npm run db:deploy
 
       - name: Start API and worker
         run: docker compose up -d api worker
