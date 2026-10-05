@@ -1,0 +1,144 @@
+generator client { provider = "prisma-client-js" }
+
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  githubUserId BigInt @unique @map("github_user_id")
+  githubLogin String @map("github_login") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  githubToken GithubToken?
+  leetcodeConnection LeetcodeConnection?
+  verificationChallenges VerificationChallenge[]
+  pairingCodes ExtensionPairingCode[]
+  extensionTokens ExtensionToken[]
+  repository Repository?
+  submissions Submission[]
+  @@map("users")
+}
+
+model GithubToken {
+  userId String @id @map("user_id") @db.Uuid
+  accessTokenEnc String @map("access_token_enc")
+  refreshTokenEnc String? @map("refresh_token_enc")
+  expiresAt DateTime? @map("expires_at")
+  status ConnectionStatus @default(ACTIVE)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("github_tokens")
+}
+
+model LeetcodeConnection {
+  userId String @id @map("user_id") @db.Uuid
+  leetcodeIdentity String @unique @map("leetcode_identity") @db.VarChar(255)
+  leetcodeUsername String @map("leetcode_username") @db.VarChar(255)
+  verifiedAt DateTime @map("verified_at")
+  status ConnectionStatus @default(ACTIVE)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("leetcode_connections")
+}
+
+model VerificationChallenge {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  tokenHash String @map("token_hash") @db.VarChar(128)
+  expiresAt DateTime @map("expires_at")
+  usedAt DateTime? @map("used_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("verification_challenges")
+}
+
+model ExtensionPairingCode {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  codeHash String @map("code_hash") @db.VarChar(128)
+  expiresAt DateTime @map("expires_at")
+  usedAt DateTime? @map("used_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("extension_pairing_codes")
+}
+
+model ExtensionToken {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  tokenHash String @unique @map("token_hash") @db.VarChar(128)
+  lastSeenAt DateTime? @map("last_seen_at")
+  extensionVersion String? @map("extension_version") @db.VarChar(64)
+  revokedAt DateTime? @map("revoked_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("extension_tokens")
+}
+
+model Repository {
+  userId String @id @map("user_id") @db.Uuid
+  githubRepoId BigInt @unique @map("github_repo_id")
+  owner String @db.VarChar(255)
+  name String @db.VarChar(255)
+  branch String @db.VarChar(255)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("repositories")
+}
+
+model Problem {
+  id String @id @default(uuid()) @db.Uuid
+  leetcodeNumber Int @unique @map("leetcode_number")
+  slug String @db.VarChar(255)
+  title String @db.VarChar(500)
+  difficulty Difficulty
+  submissions Submission[]
+  @@map("problems")
+}
+
+model Submission {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  problemId String @map("problem_id") @db.Uuid
+  providerSubmissionId String @map("provider_submission_id") @db.VarChar(255)
+  language String @db.VarChar(100)
+  status SubmissionStatus
+  solutionHash String @map("solution_hash") @db.VarChar(128)
+  submittedAt DateTime @map("submitted_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Restrict)
+  syncJob SyncJob?
+  @@unique([userId, providerSubmissionId])
+  @@index([userId, submittedAt])
+  @@map("submissions")
+}
+
+model SyncJob {
+  id String @id @default(uuid()) @db.Uuid
+  submissionId String @unique @map("submission_id") @db.Uuid
+  status SyncJobStatus
+  attempts Int @default(0)
+  nextRunAt DateTime @default(now()) @map("next_run_at")
+  lastError String? @map("last_error")
+  path String? @db.VarChar(1000)
+  commitSha String? @map("commit_sha") @db.VarChar(100)
+  startedAt DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  events SyncJobEvent[]
+  @@index([status, nextRunAt])
+  @@map("sync_jobs")
+}
+
+model SyncJobEvent {
+  id String @id @default(uuid()) @db.Uuid
+  syncJobId String @map("sync_job_id") @db.Uuid
+  step String @db.VarChar(100)
+  outcome String @db.VarChar(100)
+  detail String?
+  createdAt DateTime @default(now()) @map("created_at")
+  syncJob SyncJob @relation(fields: [syncJobId], references: [id], onDelete: Cascade)
+  @@index([syncJobId, createdAt])
+  @@map("sync_job_events")
+}
+
+enum ConnectionStatus { ACTIVE ATTENTION_REQUIRED REVOKED }
+enum Difficulty { Easy Medium Hard }
+enum SubmissionStatus { ACCEPTED WRONG_ANSWER RUNTIME_ERROR TIME_LIMIT_EXCEEDED MEMORY_LIMIT_EXCEEDED COMPILE_ERROR OTHER }
+enum SyncJobStatus { PENDING RUNNING SYNCED FAILED SKIPPED }
