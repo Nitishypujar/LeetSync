@@ -16,41 +16,26 @@ jobs:
 
       - run: npm ci
 
-      - name: Diagnose Supabase database reachability
+      - name: Resolve Supabase host through HTTPS DNS
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
         shell: bash
         run: |
-          python3 - <<'PY'
-          import os
-          import socket
-          from urllib.parse import urlsplit
+          HOST="$(node -e "process.stdout.write(new URL(process.env.DATABASE_URL).hostname)")"
+          PORT="$(node -e "process.stdout.write(new URL(process.env.DATABASE_URL).port || '5432')")"
 
-          url = urlsplit(os.environ["DATABASE_URL"])
-          host = url.hostname
-          port = url.port or 5432
+          echo "Supabase host: $HOST"
+          echo "Supabase port: $PORT"
 
-          if not host:
-              raise SystemExit("DATABASE_URL has no database host")
+          DNS_JSON="$(curl --fail --silent --show-error --retry 3 -H 'accept: application/dns-json' "https://cloudflare-dns.com/dns-query?name=${HOST}&type=A")"
 
-          print(f"DB host: {host}")
-          print(f"DB port: {port}")
+          IP="$(printf '%s' "$DNS_JSON" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);const a=(j.Answer||[]).find(x=>x.type===1&&x.data);if(!a)process.exit(1);process.stdout.write(a.data)})")"
 
-          addresses = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-          print(f"DNS addresses: {len(addresses)}")
-
-          for family, _, _, _, sockaddr in addresses:
-              address = sockaddr[0]
-              print(f"Testing {address}:{port}")
-              try:
-                  with socket.create_connection((address, port), timeout=10):
-                      print("TCP: reachable")
-                      break
-              except OSError as exc:
-                  print(f"TCP failed: {exc}")
-          else:
-              raise SystemExit("TCP: unable to reach database host")
-          PY
+          test -n "$IP"
+          echo "Resolved IPv4: $IP"
+          echo "$IP $HOST" | sudo tee -a /etc/hosts >/dev/null
+          getent hosts "$HOST"
+          python3 -c "import socket; s=socket.create_connection(('HOST',$PORT),timeout=10); s.close(); print('TCP: reachable')"
 
       - name: Apply Prisma migrations
         env:
