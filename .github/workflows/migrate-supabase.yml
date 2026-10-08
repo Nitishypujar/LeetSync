@@ -8,18 +8,50 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
       - run: npm ci
+
       - name: Diagnose Supabase database reachability
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
         shell: bash
         run: |
-          node -e 'const u=new URL(process.env.DATABASE_URL); const dns=require('dns'); console.log(''DB host:'',u.hostname); console.log(''DB port:'',u.port||5432); dns.lookup(u.hostname,(e,a)=>{if(e){console.error(e.message);process.exit(1)}; console.log(''DNS:'',a)})'
-          node -e 'const u=new URL(process.env.DATABASE_URL); const net=require(''net''); const s=net.createConnection({host:u.hostname,port:Number(u.port)||5432}); s.setTimeout(10000); s.on(''connect'',()=>{console.log(''TCP: reachable'');s.destroy()}); s.on(''timeout'',()=>{console.error(''TCP: timeout'');s.destroy();process.exit(1)}); s.on(''error'',e=>{console.error(''TCP: ''+e.message);process.exit(1)})'
+          python3 - <<'PY'
+          import os
+          import socket
+          from urllib.parse import urlsplit
+
+          url = urlsplit(os.environ["DATABASE_URL"])
+          host = url.hostname
+          port = url.port or 5432
+
+          if not host:
+              raise SystemExit("DATABASE_URL has no database host")
+
+          print(f"DB host: {host}")
+          print(f"DB port: {port}")
+
+          addresses = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+          print(f"DNS addresses: {len(addresses)}")
+
+          for family, _, _, _, sockaddr in addresses:
+              address = sockaddr[0]
+              print(f"Testing {address}:{port}")
+              try:
+                  with socket.create_connection((address, port), timeout=10):
+                      print("TCP: reachable")
+                      break
+              except OSError as exc:
+                  print(f"TCP failed: {exc}")
+          else:
+              raise SystemExit("TCP: unable to reach database host")
+          PY
+
       - name: Apply Prisma migrations
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
