@@ -16,28 +16,73 @@ jobs:
 
       - run: npm ci
 
-      - name: Resolve Supabase host through HTTPS DNS
+      - name: Find working Supabase session pooler
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
         shell: bash
         run: |
-          HOST="$(node -e "process.stdout.write(new URL(process.env.DATABASE_URL).hostname)")"
-          PORT="$(node -e "process.stdout.write(new URL(process.env.DATABASE_URL).port || '5432')")"
+          python3 - <<'PY'
+          import os
+           import re
+          import socket
+          import subprocess
+          import sys
+          from urllib.parse import urlsplit
 
-          echo "Supabase host: $HOST"
-          echo "Supabase port: $PORT"
+          original = os.environ["DATABASE_URL"]
+          parsed = urlsplit(original)
+          original_host = parsed.hostname or ""
 
-          DNS_JSON="$(curl --fail --silent --show-error --retry 3 -H 'accept: application/dns-json' "https://cloudflare-dns.com/dns-query?name=${HOST}&type=A")"
+          match = re.fullmatch(
+              r"aws-\d+-(?Pregion>.+)\.pooler\.supabase\.com",
+              original_host,
+          )
+          if not match:
+              raise SystemExit(
+                  f"Expected a Supabase shared pooler hostname, got: {original_host}"
+              )
 
-          IP="$(printf '%s' "$DNS_JSON" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const j=JSON.parse(s);const a=(j.Answer||[]).find(x=>x.type===1&&x.data);if(!a)process.exit(1);process.stdout.write(a.data)})")"
+          region = match.group("region")
+          password = parsed.password or ""
 
-          test -n "$IP"
-          echo "Resolved IPv4: $IP"
-          echo "$IP $HOST" | sudo tee -a /etc/hosts >/dev/null
-          getent hosts "$HOST"
-          python3 -c "import socket; s=socket.create_connection(('HOST',$PORT),timeout=10); s.close(); print('TCP: reachable')"
+          print(f"Supabase region: {region}")
 
-      - name: Apply Prisma migrations
-        env:
-          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
-        run: npm run prisma:deploy -w backend
+          for index in range(10):
+              host = f"aws-{index}-{region}.pooler.supabase.com"
+
+              try:
+                  socket.getaddrinfo(host, 5432, type=socket.SOCK_STREAM)
+              except OSError:
+                  print(f"Pooler {index}: DNS unavailable")
+                  continue
+
+              print(f"Pooler {index}: DNS available; trying Prisma migration")
+
+              candidate = original.replace(original_host, host, 1)
+              env = os.environ.copy()
+              env"[DATABASE_URL"] = candidate
+
+              result = subprocess.run(
+                  ["npm", "run", "prisma:deploy", "-w", "backend"],
+                  env=env,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT,
+                  text=True,
+              )
+
+              output = result.stdout.replace(password, "***")
+
+              if result.returncode == 0:
+                  print(output)
+                  print(f"SUCCESS: Supabase pooler index {index}")
+                  sys.exit(0)
+
+              print(f"Pooler {index}: Prisma migration failed")
+              safe_lines = output.strip().splitlines()
+              for line in safe_lines[-8:]:
+                  print(line)
+
+          raise SystemExit(
+              "No working Supabase shared session pooler was found for this region."
+          )
+          PY
