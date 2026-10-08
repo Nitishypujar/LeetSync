@@ -13,6 +13,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Diagnose Supabase database reachability
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        shell: bash
+        run: |
+          node -e 'const u=new URL(process.env.DATABASE_URL); const dns=require('dns'); console.log(''DB host:'',u.hostname); console.log(''DB port:'',u.port||5432); dns.lookup(u.hostname,(e,a)=>{if(e){console.error(e.message);process.exit(1)}; console.log(''DNS:'',a)})'
+          node -e 'const u=new URL(process.env.DATABASE_URL); const net=require(''net''); const s=net.createConnection({host:u.hostname,port:Number(u.port)||5432}); s.setTimeout(10000); s.on(''connect'',()=>{console.log(''TCP: reachable'');s.destroy()}); s.on(''timeout'',()=>{console.error(''TCP: timeout'');s.destroy();process.exit(1)}); s.on(''error'',e=>{console.error(''TCP: ''+e.message);process.exit(1)})'
       - name: Apply Prisma migrations
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
