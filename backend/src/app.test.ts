@@ -49,7 +49,7 @@ describe('GitHub OAuth routes', () => {
     expect(response.status).toBe(302);
     const authorizeUrl = new URL(response.headers.location as string);
     expect(authorizeUrl.hostname).toBe('github.com');
-    expect(authorizeUrl.searchParams.get('scope')).toBe('repo');
+    expect(authorizeUrl.searchParams.get('scope')).toBe('public_repo');
     expect(authorizeUrl.searchParams.get('state')).toHaveLength(43);
     expect(response.headers['set-cookie']).toEqual(
       expect.arrayContaining([
