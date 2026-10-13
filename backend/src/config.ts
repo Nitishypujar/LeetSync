@@ -12,6 +12,7 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().min(1),
   GITHUB_CALLBACK_URL: z.string().url(),
   FRONTEND_ORIGIN: z.string().url(),
+  EXTENSION_ID: z.string().default(''),
 });
 
 let parsedEnv: z.infer<typeof envSchema> | undefined;

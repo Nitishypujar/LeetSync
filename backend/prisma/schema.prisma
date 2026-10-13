@@ -1,6 +1,7 @@
 generator client {
-  provider   = "prisma-client-js"
-  engineType = "binary"
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client"
 }
 
 datasource db {
@@ -9,18 +10,18 @@ datasource db {
 }
 
 model User {
-  id                     String                  @id @default(uuid()) @db.Uuid
-  githubUserId           BigInt                  @unique @map("github_user_id")
-  githubLogin            String                  @map("github_login") @db.VarChar(255)
-  createdAt              DateTime                @default(now()) @map("created_at")
-  githubToken            GithubToken?
-  leetcodeConnection     LeetcodeConnection?
-  verificationChallenges VerificationChallenge[]
-  pairingCodes           ExtensionPairingCode[]
-  extensionTokens        ExtensionToken[]
-  repository             Repository?
-  submissions            Submission[]
-  sessions               Session[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  githubUserId       BigInt              @unique @map("github_user_id")
+  githubLogin        String              @map("github_login") @db.VarChar(255)
+  githubDisplayName  String?             @map("github_display_name") @db.VarChar(255)
+  timeZone           String              @default("UTC") @map("time_zone") @db.VarChar(100)
+  createdAt          DateTime            @default(now()) @map("created_at")
+  githubToken        GithubToken?
+  leetcodeConnection LeetcodeConnection?
+  extensionTokens    ExtensionToken[]
+  repository         Repository?
+  submissions        Submission[]
+  sessions           Session[]
 
   @@map("users")
 }
@@ -52,38 +53,15 @@ model GithubToken {
 }
 
 model LeetcodeConnection {
-  userId           String           @id @map("user_id") @db.Uuid
-  leetcodeIdentity String           @unique @map("leetcode_identity") @db.VarChar(255)
-  leetcodeUsername String           @map("leetcode_username") @db.VarChar(255)
-  verifiedAt       DateTime         @map("verified_at")
-  status           ConnectionStatus @default(ACTIVE)
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String           @id @map("user_id") @db.Uuid
+  leetcodeIdentity  String           @unique @map("leetcode_identity") @db.VarChar(255)
+  leetcodeUsername  String           @map("leetcode_username") @db.VarChar(255)
+  detectedUsername String?          @map("detected_username") @db.VarChar(255)
+  verifiedAt        DateTime?        @map("verified_at")
+  status            ConnectionStatus @default(PENDING)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("leetcode_connections")
-}
-
-model VerificationChallenge {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  tokenHash String    @map("token_hash") @db.VarChar(128)
-  expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("verification_challenges")
-}
-
-model ExtensionPairingCode {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  codeHash  String    @map("code_hash") @db.VarChar(128)
-  expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("extension_pairing_codes")
 }
 
 model ExtensionToken {
@@ -116,6 +94,7 @@ model Problem {
   slug           String       @db.VarChar(255)
   title          String       @db.VarChar(500)
   difficulty     Difficulty
+  topicTags      String[]     @default([]) @map("topic_tags")
   submissions    Submission[]
 
   @@map("problems")
@@ -127,6 +106,9 @@ model Submission {
   problemId            String           @map("problem_id") @db.Uuid
   providerSubmissionId String           @map("provider_submission_id") @db.VarChar(255)
   language             String           @db.VarChar(100)
+  sourceCode           String           @default("") @map("source_code") @db.Text
+  runtime              String           @default("") @db.VarChar(100)
+  memory               String           @default("") @db.VarChar(100)
   status               SubmissionStatus
   solutionHash         String           @map("solution_hash") @db.VarChar(128)
   submittedAt          DateTime         @map("submitted_at")
@@ -172,6 +154,7 @@ model SyncJobEvent {
 }
 
 enum ConnectionStatus {
+  PENDING
   ACTIVE
   ATTENTION_REQUIRED
   REVOKED

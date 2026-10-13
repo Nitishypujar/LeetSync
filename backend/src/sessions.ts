@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { randomBytes } from 'node:crypto';
-import type { User } from '@prisma/client';
+import type { User } from './generated/prisma/client.js';
 import { prisma } from './db.js';
 import { hashToken, equalSecrets } from './crypto.js';
 import { getEnv } from './config.js';

@@ -1,22 +1,11 @@
-# Phase 2 Report — GitHub Authentication and Identity
+# Phase 2 — Persistent GitHub identity
 
-## Built
+The GitHub OAuth and identity foundation is complete:
 
-- GitHub OAuth web-application flow with random `state` validation through a short-lived HttpOnly SameSite cookie.
-- Server-side authorization-code exchange and authenticated-user revalidation through GitHub's `/user` API.
-- Database-backed sessions with SHA-256 hashed session tokens, revocation, and 30-day expiry.
-- HttpOnly + SameSite session cookie; `Secure` is enabled automatically in production.
-- CSRF cookie + `X-CSRF-Token` validation for authenticated state-changing requests such as logout.
-- AES-256-GCM encryption for GitHub access and refresh tokens at rest.
-- `/api/me` reads identity only from the authenticated session; no client-supplied `user_id` is accepted.
-- GitHub identity is keyed by GitHub's numeric `id` and protected by the existing database `UNIQUE` constraint.
-- Access-token refresh helper for expiring GitHub OAuth tokens, including refresh-token rotation when GitHub returns a replacement token.
-- Automated database integration test proving the same GitHub identity cannot be inserted into two users.
+- Authorization-code login requests the `repo` scope and validates the returned account through GitHub's `/user` API.
+- A GitHub user's numeric ID is the stable database key. Display name and login are saved for commit attribution.
+- Access and refresh tokens are encrypted with AES-256-GCM; database sessions hold token hashes and survive browser restarts for 30 days.
+- OAuth state, SameSite cookie attributes, CSRF, unauthenticated routes, and repository-scope selection have automated API coverage.
+- The initial GitHub repository is created or reused by the authenticated setup API, without overwriting existing repository contents.
 
-## Manual verification required
-
-A real interactive GitHub login/logout test must be performed with the registered OAuth application's credentials. Secrets stay only in local/hosted secret stores.
-
-## Exit status
-
-PENDING real GitHub browser verification and the CI run for this phase.
+The later sync implementation uses these identity records to create commits with the account's numeric-ID noreply email. Full end-to-end evidence is tracked in [LIMITATIONS.md](LIMITATIONS.md) and the root README's test report.

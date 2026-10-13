@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "LeetSync",
+  "description": "Automatically sync accepted LeetCode submissions to GitHub.",
+  "version": "0.1.4",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp5Z26QibHo6eDzsoytlf7LxkUd8v+BWq2j5R3/kZosAlGYH3riX7PJ5W520SRu+Q6u2j47MXLNR9/nyhXhY8tfcQdDnCV68h45MOWg9fWc8h6eVkcF4fAzZV/QrquT9t9DusUO6APMWiWCIzxW1UQnPzpm54b54axAPc7NJrdAw/A2oBuXEKJqw2Zron3Dq8PDeJ3WEC+tbEtpnrG/D69EoYfXoDqGxNvwDEyIlzIMl0ms5rzQub0bNIUWGwJQKdsEjkObH4FV7jcFW/vB1fo8Q/9rnE3WJF54Ab3QEm2oZpeJawWP1cwqlV6N4S84MnOadp9i3akRp+NRYxq+9MWwIDAQAB",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*",
+    "https://api.leetsync.app/*",
+    "https://leetcode.com/*",
+    "https://leetcode.cn/*"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:5173/*",
+      "http://127.0.0.1:5173/*",
+      "https://app.leetsync.app/*"
+    ]
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "popup.html", "default_title": "LeetSync" },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/*", "https://leetcode.cn/*"],
+      "js": ["page-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://leetcode.com/*", "https://leetcode.cn/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
