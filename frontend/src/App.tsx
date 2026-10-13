@@ -119,7 +119,7 @@ function friendlyError(error: unknown): string {
   const messages: Record<string, string> = {
     GITHUB_REAUTH_REQUIRED: 'Reconnect GitHub to continue syncing.',
     GITHUB_REPOSITORY_SETUP_FAILED:
-      'GitHub could not create the solution repository. Check the `repo` permission and retry.',
+      'GitHub could not create the public solution repository. Check that the OAuth app has the `public_repo` scope and retry.',
     GITHUB_DEFAULT_REPOSITORY_UNAVAILABLE:
       'Your existing leetcode-solutions repository must be public, active, and writable. LeetSync did not create another repository.',
     GITHUB_REPOSITORY_NAME_UNAVAILABLE:
