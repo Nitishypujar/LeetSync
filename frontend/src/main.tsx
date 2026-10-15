@@ -1,10 +1,19 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.js';
+import { LegalPage } from './LegalPages.js';
 import './styles.css';
 
-createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+const path = window.location.pathname.replace(/\/+$/, '');
+const screen =
+  path === '/privacy' ? (
+    <LegalPage kind="privacy" />
+  ) : path === '/terms' ? (
+    <LegalPage kind="terms" />
+  ) : (
     <App />
-  </React.StrictMode>,
+  );
+
+createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>{screen}</React.StrictMode>,
 );

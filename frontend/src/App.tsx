@@ -791,6 +791,8 @@ function App() {
           <a href="https://github.com" target="_blank" rel="noreferrer">
             GitHub ↗
           </a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
         </footer>
       </div>
     </main>
