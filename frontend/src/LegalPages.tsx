@@ -2,8 +2,10 @@ import type { ReactNode } from 'react';
 
 export type LegalKind = 'privacy' | 'terms';
 
-const CONTACT_EMAIL = '[CONTACT EMAIL]';
-const LAST_UPDATED = '[DATE]';
+const CONTACT_EMAIL = '2006nitishypujar@gmail.com';
+const OPERATOR = 'NITISH Y PUJAR';
+const JURISDICTION = 'India';
+const LAST_UPDATED = 'October 19, 2026';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -32,8 +34,8 @@ function PrivacyPolicy() {
             noreply email address, used to attribute commits to you.
           </li>
           <li>
-            A GitHub OAuth authorization token, encrypted at rest. It is used
-            only to create the destination repository and write commits.
+            GitHub access credentials, encrypted at rest and used to create or
+            reuse the destination repository and write commits.
           </li>
           <li>
             Your LeetCode username and the link status between your accounts.
@@ -62,9 +64,10 @@ function PrivacyPolicy() {
       <Section title="Public GitHub repository">
         <p>
           Solutions are committed to a repository in your GitHub account named{' '}
-          <code>leetcode-solutions</code>. The current GitHub authorization
-          covers public repositories, so those commits and files are public to
-          anyone. Do not use LeetSync for code you need to keep private.
+          <code>leetcode-solutions</code>. LeetSync requests GitHub permissions
+          to create or reuse this repository and write accepted solutions. The
+          repository is public, so its commits and files are visible to anyone.
+          Do not use LeetSync for code you need to keep private.
         </p>
       </Section>
 
@@ -166,7 +169,7 @@ function TermsOfService() {
 
       <Section title="Limitation of liability">
         <p>
-          To the fullest extent permitted by law, [OPERATOR] is not liable for
+          To the fullest extent permitted by law, {OPERATOR} is not liable for
           indirect or consequential losses arising from use of LeetSync.
         </p>
       </Section>
@@ -174,15 +177,15 @@ function TermsOfService() {
       <Section title="Termination">
         <p>
           You may stop using LeetSync at any time by disconnecting your accounts
-          or deleting your data. [OPERATOR] may suspend accounts that abuse the
+          or deleting your data. {OPERATOR} may suspend accounts that abuse the
           service.
         </p>
       </Section>
 
       <Section title="Changes and governing law">
         <p>
-          [OPERATOR] may update these terms and will change the date above.
-          These terms are governed by the laws of [JURISDICTION].
+          {OPERATOR} may update these terms and will change the date above.
+          These terms are governed by the laws of {JURISDICTION}.
         </p>
       </Section>
 

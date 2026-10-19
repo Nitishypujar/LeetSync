@@ -1,9 +1,9 @@
 import { getEnv } from './config.js';
 import { prisma } from './db.js';
-import { processOneSyncJob } from './sync-worker.js';
+import { runSyncWorkerLoop } from './sync-worker-loop.js';
 
 const env = getEnv();
-let shuttingDown = false;
+const controller = new AbortController();
 
 console.log(
   JSON.stringify({
@@ -15,7 +15,7 @@ console.log(
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
-    shuttingDown = true;
+    controller.abort();
     console.log(
       JSON.stringify({
         level: 'info',
@@ -27,12 +27,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 }
 
 try {
-  while (!shuttingDown) {
-    const worked = await processOneSyncJob();
-    if (!worked && !shuttingDown) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-  }
+  await runSyncWorkerLoop(controller.signal);
 } catch (error) {
   console.error(
     JSON.stringify({

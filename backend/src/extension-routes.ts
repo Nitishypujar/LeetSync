@@ -138,6 +138,23 @@ export function registerExtensionRoutes(app: Express): void {
           res.status(409).json({ error: 'EXTENSION_HANDSHAKE_EXPIRED' });
           return;
         }
+        const connection = await prisma.leetcodeConnection.findUnique({
+          where: { userId },
+          select: {
+            leetcodeUsername: true,
+            detectedUsername: true,
+            status: true,
+          },
+        });
+        if (
+          !connection ||
+          !connection.detectedUsername ||
+          normalizeLeetcodeUsername(connection.leetcodeUsername) !==
+            normalizeLeetcodeUsername(connection.detectedUsername)
+        ) {
+          res.status(409).json({ error: 'LEETCODE_ACCOUNT_NOT_DETECTED' });
+          return;
+        }
         await prisma.$transaction([
           prisma.extensionToken.updateMany({
             where: {
@@ -151,7 +168,27 @@ export function registerExtensionRoutes(app: Express): void {
             where: { id: current.id },
             data: { lastSeenAt: new Date() },
           }),
+          ...(connection.status === 'PENDING'
+            ? [
+                prisma.leetcodeConnection.updateMany({
+                  where: {
+                    userId,
+                    status: 'PENDING',
+                    detectedUsername: connection.detectedUsername,
+                  },
+                  data: { status: 'ACTIVE', verifiedAt: new Date() },
+                }),
+              ]
+            : []),
         ]);
+        const confirmed = await prisma.leetcodeConnection.findUnique({
+          where: { userId },
+          select: { status: true },
+        });
+        if (confirmed?.status !== 'ACTIVE') {
+          res.status(409).json({ error: 'LEETCODE_ACCOUNT_NOT_DETECTED' });
+          return;
+        }
         res.status(204).send();
       } catch (error) {
         next(error);
@@ -212,13 +249,14 @@ export function registerExtensionRoutes(app: Express): void {
         );
         const connection = await prisma.leetcodeConnection.findUnique({
           where: { userId },
-          select: { leetcodeUsername: true },
+          select: { leetcodeUsername: true, status: true },
         });
         const matches = Boolean(
           connection &&
           normalizeLeetcodeUsername(connection.leetcodeUsername) === username,
         );
         const now = new Date();
+        const mismatch = Boolean(connection && !matches);
         await prisma.$transaction([
           prisma.extensionToken.update({
             where: { id: res.locals.extensionTokenId as string },
@@ -233,16 +271,20 @@ export function registerExtensionRoutes(app: Express): void {
                   where: { userId },
                   data: {
                     detectedUsername: parsed.data.leetcodeUsername,
-                    status: matches ? 'ACTIVE' : 'PENDING',
-                    verifiedAt: matches ? now : null,
+                    // An extension bearer token can report identity, but cannot
+                    // activate a pending link. A mismatch can still deactivate it.
+                    ...(mismatch
+                      ? { status: 'PENDING' as const, verifiedAt: null }
+                      : {}),
                   },
                 }),
               ]
             : []),
         ]);
         res.status(200).json({
-          linked: matches,
-          mismatch: connection ? !matches : false,
+          linked: matches && connection?.status === 'ACTIVE',
+          confirmationRequired: matches && connection?.status !== 'ACTIVE',
+          mismatch,
         });
       } catch (error) {
         next(error);

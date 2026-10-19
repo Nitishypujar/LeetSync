@@ -1,51 +1,46 @@
-# Release status and completion pass
+# Release readiness
 
-This note records the completion pass for LeetSync, what it changed, what was verified, and what still requires your accounts, a decision, or a real-world test. It does not claim that the project is ready for public release.
+> **Current handoff verification (2026-10-19):** Full local `npm run ci` passed lint, type checks, 50 backend tests, 24 frontend/extension tests, production builds, and Prettier. All 6 database integration tests passed twice: on a clean disposable database and on a disposable database initialized from the two historical Supabase CLI migrations, baselined with Prisma metadata, then advanced through all six Prisma migrations. `npm audit --audit-level=moderate` found 0 vulnerabilities. Backend and frontend production Docker images built successfully; the GitHub Actions workflow supplies the explicit same-origin preview URL required for the frontend image. No deployment, hosted database mutation, source push, or live submission/commit was performed. See [the detailed verification handoff](VERIFICATION_HANDOFF_2026-10-16.md) for remote branch comparison, canonical repository inspection, registration values, and remaining gates.
 
-## Changed in this pass
+> **Migration safety:** the `20261012000000_automatic_linking_and_full_submissions` migration has been changed locally to preserve the legacy `extension_pairing_codes` and `verification_challenges` tables and their rows. It applied successfully on a clean disposable PostgreSQL database. Before using it against a shared database, verify that the old migration has not already been applied there; rewriting an applied Prisma migration can cause a checksum mismatch.
 
-- Dashboard favicon (`frontend/public/favicon.svg`) linked from `frontend/index.html`.
-- Draft Privacy Policy and Terms of Service pages at `/privacy` and `/terms` (`frontend/src/LegalPages.tsx`, routed in `frontend/src/main.tsx`). Both are marked DRAFT and contain bracketed placeholders for the contact address, hosting providers, region, governing law, and retention periods. They must be reviewed and completed before publishing.
-- Footer links to Privacy and Terms in the dashboard (`frontend/src/App.tsx`).
-- Styles for the legal pages (`frontend/src/styles.css`).
-- This document.
+> **Approval follow-up (2026-10-16):** User approved a new review branch, Render preview setup with auto-deploy off, GitHub App registration, a conditional non-destructive migration fix, and hosted migrations only after all gates pass. The GitHub branch creation call was denied with HTTP 403 by the connected integration; Render is not connected. Later read-only Supabase inspection found existing tables and Supabase CLI history for the first two migrations, but no Prisma history table. The hosted schema has not been modified. The user approved separating migrations from service startup. `render.yaml` starts only `npm run start -w backend`; migration execution remains a separate operation. A local disposable rehearsal proved that the first two migrations can be baselined and all six Prisma migrations applied to a database initialized from the historical Supabase SQL files. Before any hosted change, obtain a recoverable backup, compare schema and data, then request approval for the precise baseline and migration operation. No Render resource was changed.
 
-No backend, database schema, extension, or worker behavior was changed in this pass. Nothing in the existing pairing, sync, or GitHub flow was altered, so the previously passing CI baseline should still apply.
+LeetSync is not ready for a public multi-user release. Core sync flows and isolated database integration tests have been exercised, but production hosting, GitHub App registration/verification, encryption/session key rotation, a safe hosted database migration, and a final live-browser regression pass remain outstanding.
 
-## Verified in the completion sandbox
+## Changes and verification in this pass
 
-- TypeScript typecheck passes for `shared`, `backend`, and `frontend`.
-- Extension tests pass (17 of 17): `node --test extension/tests/*.mjs`.
-- ESLint and Prettier pass on the changed TypeScript files.
+- Removed the two incorrectly synced `Pow(x, n)` files from `Nitishypujar/leetcode-solutions`. The repository README now lists only the valid Two Sum and Median of Two Sorted Arrays entries.
+- Cleaned the public repository layout: the root now contains only its overview README and `solutions/`; each accepted problem folder contains exactly one problem README and the submitted source. Removed the stale duplicate root-level Median README after moving its accepted source under `solutions/`.
+- Hardened LeetCode pairing. An extension heartbeat can report the detected username and deactivate a mismatched link, but only a dashboard-authenticated, CSRF-protected completion of the one-time pairing token can activate the link.
+- Added production configuration checks that reject insecure/local public URLs and common sample placeholders for production secrets, with regression coverage that preserves local development settings.
+- Made the dashboard image generate `connect-src` from its configured API URL; standalone builds now reject localhost API targets unless a local-only build override is explicitly enabled.
+- Updated dashboard pairing retries and extension status handling so a matching account waits for dashboard confirmation and buffered submissions remain queued until then.
+- Added a database-backed regression scenario for heartbeat, authenticated pairing completion, and mismatch deactivation, plus an extension test for buffered delivery while confirmation is pending.
+- Preserved the dashboard favicon, draft Privacy and Terms pages, and footer links from the earlier completion pass.
+- Added resumable, compare-and-swap encryption-key rotation for saved GitHub tokens, with support for temporarily accepting the previous key. The key itself has not been rotated yet.
+- Added a GitHub App connection flow that validates browser-bound install state, verifies that exactly the canonical solution repository was selected, and mints installation tokens scoped to that repository and Contents write permission. The worker now uses those scoped tokens. If an install is granted extra repository access, LeetSync attempts to uninstall it only after verifying that it belongs to the signed-in user's personal account; disconnect removes that user's app installation and always removes the local write link.
+- Added same-origin production mode that serves the dashboard from the API process, simplifying cookie security and the free preview deployment.
+- Fixed same-origin production extension pairing to pass the dashboard/API origin to the browser extension. The extension validates dashboard messages and API targets against its manifest allowlists; the expected Render preview origin has regression coverage.
+- GitHub OAuth secret and Supabase database password were rotated in local configuration; a read-only Supabase connection check succeeded. The session secret and token-encryption key still need their planned rotation.
+- **Current local result:** `npm run ci` passed on 2026-10-19 with 50 backend tests and 24 frontend/extension tests. The 6 database integration tests also passed separately against the disposable local database. Never run them against hosted Supabase.
+- **Rate-limit hardening:** Render’s service config opts into the validated `CF-Connecting-IP` header for anonymous limits; other environments keep proxy headers untrusted. Buckets are capped at 4,096 entries. The limiter remains per-process, so multi-instance production requires shared storage.
+- **Legal drafts:** operator name (`NITISH Y PUJAR`), support email, and India jurisdiction provided by the user are now filled in. Retention, hosting/database region, and legal review remain outstanding; pages are still labeled drafts.
+- **Local preview:** Docker Compose was rebuilt and started on 2026-10-19. Its API returned HTTP 200 from `/health`, the frontend returned the dashboard HTML, and its database is the local `postgres` Compose service. No hosted Supabase or external GitHub writes were used.
+- **Current dependency audit:** `npm audit --audit-level=moderate` completed on 2026-10-19 with zero reported vulnerabilities.
 
-## Not verified in the sandbox (run these on your machine)
+## Required before public release
 
-The sandbox has no network access and `node_modules` was installed on Windows, so these could not run here:
+1. **Finish secret rotation.** GitHub OAuth secret and Supabase database password have been rotated locally. Rotate `TOKEN_ENCRYPTION_KEY` using the documented two-key migration, and replace `SESSION_SECRET` in the eventual hosting secret store. Never commit `.env` files or paste secrets in chat.
+2. **Separate local and production databases.** `backend/.env` points at Supabase, while the root Compose configuration targets its local PostgreSQL service. Do not run `npm run db:deploy`, `npm run test:db`, or backend server commands against the Supabase configuration during local work. Use a dedicated disposable test database for integration tests.
+3. **Resolve the hosted migration gate.** Supabase currently has CLI history for `20261005180000` and `20261005220000`, existing tables, and no `_prisma_migrations`. Never run Prisma deploy directly. Obtain a recoverable backup (or choose a fresh production database), compare the schema, then baseline only those two existing migrations and apply the four remaining migrations as a reviewed one-off operation. No hosted migration has run.
+4. **Register and verify the GitHub App.** The flow is implemented behind `GITHUB_AUTH_MODE=github_app`, but has not been exercised against a registered App. Register it after the public service URL is known. Configure the user authorization callback as `/api/auth/github/callback`, the setup URL as `/api/github/installation/callback`, repository creation permission for the canonical repo, and Contents write. During installation, grant access only to `leetcode-solutions`. Revoke old OAuth grants after App verification.
+5. **Rotate production secrets.** The GitHub OAuth secret and Supabase database password were rotated locally; rotate `TOKEN_ENCRYPTION_KEY` using the documented two-key migration and set a new `SESSION_SECRET` in the eventual hosting secret store.
+6. **Deploy and verify.** Connect the Render account, configure the exact public callback URL, HTTPS, production secrets, backups, and monitoring, then deploy the same-origin preview with the co-hosted worker. The free tier can sleep and is not suitable for dependable production syncing. Keep one API instance until rate limiting uses a shared store.
+7. **Finish launch materials.** Complete and review the draft legal pages, configure the custom domain, and test the full flow on that domain. The current legal pages contain placeholders and are not publication-ready.
 
-- Prisma client generation and engine download (`npm run db:generate`).
-- The backend Vitest suite (`npm run test -w backend`).
-- Database integration tests (`npm run test:db`) and migrations.
-- The Vite production build (`npm run build -w frontend`) and the Docker image builds.
+## Remaining known limits
 
-Run `npm run ci` on your machine to cover all of these.
-
-## Required before any public release
-
-These items need your accounts, a decision, or a real-world test. None can be completed by code alone.
-
-1. **Rotate credentials now.** The uploaded archive contained live-looking secrets in `.env` and `backend/.env`: the GitHub OAuth client secret, session secret, token encryption key and database password. Rotate all of them. If you change `TOKEN_ENCRYPTION_KEY`, existing encrypted GitHub tokens become unreadable and each user must reconnect GitHub. Never commit `.env` files.
-2. **Database target.** `backend/.env` points at a Supabase pooler, while the root `.env` used by Docker Compose points at the local `postgres` container. `npm run dev:api`, `npm run db:deploy` and `npm run test:db` read `backend/.env`, so they act on the Supabase database. Use Docker Compose for local work, and never run test or migration commands against a database holding real data.
-3. **LeetCode ownership design (decision needed).** The heartbeat marks a connection `ACTIVE` when the username string reported by the extension token matches the saved username. A stolen extension token can therefore activate a connection by itself. Two options:
-   - *Option A, no page change (recommended given your preference against profile challenges):* Activation happens only through the dashboard-initiated pairing (`handshake/complete`, which requires a session and CSRF token), and the heartbeat may only deactivate a connection, never activate it. A stolen extension token then cannot activate a pending link alone. Residual risk: a stolen token can still submit payloads for an already-active link, as documented in `SECURITY.md`.
-   - *Option B, profile challenge:* Stronger proof of account control, but you have said you dislike this approach.
-   Choose one, then add the regression tests listed in `docs/SECURITY.md`.
-4. **GitHub App.** Replace the broad `public_repo` OAuth scope with a GitHub App installation limited to the selected repository and Contents permission. This needs an app registered in your GitHub account.
-5. **Real LeetCode capture test.** Submit a real Accepted solution with the current extension and confirm the commit, the dashboard link, and the duplicate/retry behaviour. This is the single most important unverified item.
-6. **Production deployment.** Choose hosting, configure HTTPS and HSTS at the TLS terminator, production origins and secure cookies, managed secrets, backups with a restore test, monitoring, and a shared rate-limit store before running more than one API instance.
-7. **Launch items.** Connect the custom domain, confirm the favicon on the deployed domain, have the legal pages reviewed and completed, and test the full journey on the live domain.
-
-## Optional, after release
-
-- Historical backfill of earlier accepted submissions.
-- Chrome Web Store listing and update process.
-- Broader browser end-to-end automation.
+- A stolen extension token can still submit a fake, valid-shaped Accepted payload for an already-active link because LeetCode provides no server-verifiable receipt. Disconnecting the browser or LeetCode link revokes the token. A repository-limited GitHub App reduces the potential write scope.
+- Automated tests cannot prove the service is unbreachable. The database-backed pairing regression passed against an isolated disposable PostgreSQL database; it still needs end-to-end validation through the deployed service and real extension.
+- Historical backfill, Chrome Web Store publishing, and broader browser automation can follow after the release gates above.

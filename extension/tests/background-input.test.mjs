@@ -31,12 +31,33 @@ function createHarness({
   };
   const requests = [];
   let messageListener;
+  let externalMessageListener;
   const chrome = {
     runtime: {
       id: 'test-extension-id',
-      getManifest: () => ({ version: '0.1.4' }),
+      getManifest: () => ({
+        version: '0.1.5',
+        host_permissions: [
+          'http://localhost:3000/*',
+          'http://127.0.0.1:3000/*',
+          'https://api.leetsync.app/*',
+          'https://leetsync-nitishypujar.onrender.com/*',
+          'https://leetcode.com/*',
+          'https://leetcode.cn/*',
+        ],
+        externally_connectable: {
+          matches: [
+            'http://localhost:5173/*',
+            'http://127.0.0.1:5173/*',
+            'https://app.leetsync.app/*',
+            'https://leetsync-nitishypujar.onrender.com/*',
+          ],
+        },
+      }),
       onMessage: { addListener: (listener) => (messageListener = listener) },
-      onMessageExternal: { addListener() {} },
+      onMessageExternal: {
+        addListener: (listener) => (externalMessageListener = listener),
+      },
       onStartup: { addListener() {} },
       onInstalled: { addListener() {} },
     },
@@ -153,8 +174,40 @@ function createHarness({
         messageListener(message, { url: page }, resolve);
       });
     },
+    async sendExternal(message, page) {
+      return await new Promise((resolve) => {
+        externalMessageListener(message, { url: page }, resolve);
+      });
+    },
   };
 }
+
+test('dashboard pairing accepts only API origins declared by extension permissions', async () => {
+  const harness = createHarness();
+  const token = 'lsx_ext_abcdefghijklmnopqrstuvwxyz0123456789';
+  const dashboardUrl = 'https://leetsync-nitishypujar.onrender.com/dashboard';
+
+  const rejected = await harness.sendExternal(
+    { type: 'LEETSYNC_TOKEN', token, apiBase: 'https://attacker.example' },
+    dashboardUrl,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(rejected)), { saved: false });
+  assert.equal(harness.state.apiBase, 'http://localhost:3000');
+
+  const accepted = await harness.sendExternal(
+    {
+      type: 'LEETSYNC_TOKEN',
+      token,
+      apiBase: 'https://leetsync-nitishypujar.onrender.com',
+    },
+    dashboardUrl,
+  );
+  assert.equal(accepted.saved, true);
+  assert.equal(
+    harness.state.apiBase,
+    'https://leetsync-nitishypujar.onrender.com',
+  );
+});
 
 function bufferedSubmission(submissionId) {
   return {
@@ -306,6 +359,26 @@ test('background stops when the dashboard says this LeetCode account is mismatch
     false,
   );
   assert.equal(harness.state.extensionStatus, 'mismatch');
+});
+
+test('matching heartbeat waits for dashboard pairing before submission delivery', async () => {
+  const harness = createHarness({
+    heartbeatBody: { linked: false, confirmationRequired: true },
+    submissionResponse: async () => ({
+      status: 409,
+      body: { error: 'LEETCODE_ACCOUNT_NOT_LINKED' },
+    }),
+  });
+  await harness.send({ type: 'submission-candidate', submissionId: '12345' });
+
+  assert.equal(harness.state.extensionStatus, 'waiting-dashboard');
+  assert.equal(harness.state.pendingSubmissions.length, 1);
+  assert.equal(
+    harness.requests.some((request) =>
+      request.url.endsWith('/api/extension/submissions'),
+    ),
+    true,
+  );
 });
 
 test('background never sends an oversized source returned by LeetCode', async () => {

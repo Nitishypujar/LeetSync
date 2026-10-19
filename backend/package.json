@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file=.env --import=tsx src/server.ts",
+    "start": "node dist/server.js",
     "worker": "node --env-file=.env --import=tsx src/worker.ts",
+    "rotate:encryption-key": "node --import=tsx src/rotate-encryption-key.ts",
+    "rotate:encryption-key:local": "node --env-file=.env --import=tsx src/rotate-encryption-key.ts",
     "prebuild": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true });\"",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

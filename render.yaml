@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: leetsync-nitishypujar
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start -w backend
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RUN_SYNC_WORKER
+        value: 'true'
+      - key: TRUST_CF_CONNECTING_IP
+        value: 'true'
+      - key: GITHUB_AUTH_MODE
+        value: github_app
+      - key: EXTENSION_ID
+        value: nadlcboffmafknogdcgohdcledaomppo
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_APP_ID
+        sync: false
+      - key: GITHUB_APP_SLUG
+        sync: false
+      - key: GITHUB_APP_PRIVATE_KEY
+        sync: false
+      - key: GITHUB_CALLBACK_URL
+        value: https://leetsync-nitishypujar.onrender.com/api/auth/github/callback
+      - key: FRONTEND_ORIGIN
+        fromService:
+          name: leetsync-nitishypujar
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL

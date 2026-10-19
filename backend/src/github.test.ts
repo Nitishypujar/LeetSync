@@ -26,6 +26,7 @@ beforeEach(() => {
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
   process.env.GITHUB_CLIENT_ID = 'test-client';
   process.env.GITHUB_CLIENT_SECRET = 'test-secret';
+  process.env.GITHUB_AUTH_MODE = 'oauth';
   process.env.GITHUB_CALLBACK_URL =
     'http://localhost:3000/api/auth/github/callback';
   process.env.FRONTEND_ORIGIN = 'http://localhost:5173';
@@ -37,6 +38,18 @@ describe('GitHub OAuth and repository setup', () => {
   it('requests access to public repositories only', () => {
     const url = new URL(buildGithubAuthorizeUrl('state'));
     expect(url.searchParams.get('scope')).toBe('public_repo');
+  });
+
+  it('does not request the broad public_repo OAuth scope in GitHub App mode', async () => {
+    process.env.GITHUB_AUTH_MODE = 'github_app';
+    process.env.GITHUB_APP_ID = '12345';
+    process.env.GITHUB_APP_SLUG = 'leetsync-test';
+    process.env.GITHUB_APP_PRIVATE_KEY = 'test-private-key';
+    vi.resetModules();
+    const { buildGithubAuthorizeUrl: buildAppAuthorizeUrl } =
+      await import('./github.js');
+    const url = new URL(buildAppAuthorizeUrl('state'));
+    expect(url.searchParams.has('scope')).toBe(false);
   });
 
   it('reuses the owned default repository without changing its contents', async () => {

@@ -1,6 +1,8 @@
 import { prisma } from './db.js';
 import { getValidGithubAccessToken } from './auth.js';
 import { createGithubCommit, getGithubRepository } from './github.js';
+import { createGithubInstallationAccessToken } from './github-app.js';
+import { getEnv } from './config.js';
 import { buildSolutionFiles } from './solution-files.js';
 
 const MAX_ATTEMPTS = 5;
@@ -213,7 +215,15 @@ export async function processOneSyncJob(): Promise<boolean> {
     const repository = job.submission.user.repository;
     if (!repository)
       throw new Error('Choose a GitHub repository before syncing.');
-    const accessToken = await getValidGithubAccessToken(job.submission.userId);
+    const accessToken =
+      getEnv().GITHUB_AUTH_MODE === 'github_app'
+        ? repository.installationId
+          ? await createGithubInstallationAccessToken(
+              repository.installationId,
+              repository.githubRepoId,
+            )
+          : null
+        : await getValidGithubAccessToken(job.submission.userId);
     if (!accessToken) throw new Error('Reconnect GitHub before syncing.');
 
     const remoteRepository = await getGithubRepository(

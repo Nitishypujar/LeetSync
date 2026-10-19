@@ -76,7 +76,9 @@ export function buildGithubAuthorizeUrl(state: string): string {
   const url = new URL(`${GITHUB_OAUTH}/authorize`);
   url.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
   url.searchParams.set('redirect_uri', env.GITHUB_CALLBACK_URL);
-  url.searchParams.set('scope', GITHUB_SCOPE);
+  if (env.GITHUB_AUTH_MODE === 'oauth') {
+    url.searchParams.set('scope', GITHUB_SCOPE);
+  }
   url.searchParams.set('state', state);
   return url.toString();
 }
@@ -193,6 +195,20 @@ export async function listGithubRepositories(
   return repositories;
 }
 
+export async function listGithubInstallationRepositories(
+  userAccessToken: string,
+  installationId: bigint,
+): Promise<GithubRepository[]> {
+  const response = await fetch(
+    `${GITHUB_API}/user/installations/${installationId}/repositories?per_page=100`,
+    { headers: githubHeaders(userAccessToken) },
+  );
+  const data = z
+    .object({ repositories: z.array(githubRepositorySchema) })
+    .parse(await parseGithubResponse(response));
+  return data.repositories;
+}
+
 export async function getGithubRepository(
   accessToken: string,
   owner: string,
@@ -209,13 +225,14 @@ export async function getOrCreateDefaultGithubRepository(
   accessToken: string,
   login: string,
 ): Promise<GithubRepository> {
+  const githubAppMode = getEnv().GITHUB_AUTH_MODE === 'github_app';
   const requireReadyRepository = (
     repository: GithubRepository,
   ): GithubRepository => {
     if (
       repository.private ||
       repository.archived ||
-      repository.permissions?.push !== true
+      (!githubAppMode && repository.permissions?.push !== true)
     ) {
       throw new Error(
         'The existing leetcode-solutions repository must be public, unarchived, and writable. No extra repository was created.',
@@ -229,7 +246,7 @@ export async function getOrCreateDefaultGithubRepository(
   ): Promise<GithubRepository | null> => {
     const response = await fetch(
       `${GITHUB_API}/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}`,
-      { headers: githubHeaders(accessToken) },
+      { headers: githubHeaders(githubAppMode ? undefined : accessToken) },
     );
     if (response.status === 404) return null;
     return githubRepositorySchema.parse(await parseGithubResponse(response));

@@ -11,6 +11,7 @@ import {
   revokeGithubAuthorization,
 } from './github.js';
 import { getEnv } from './config.js';
+import { uninstallGithubAppInstallation } from './github-app.js';
 import { rateLimit } from './rate-limit.js';
 import {
   createSession,
@@ -208,10 +209,23 @@ export function registerAuthRoutes(app: import('express').Express): void {
     rateLimit(5, 60_000),
     async (_req, res, next) => {
       try {
-        const user = res.locals.user as { id: string };
+        const user = res.locals.user as { id: string; githubLogin: string };
         const token = await prisma.githubToken.findUnique({
           where: { userId: user.id },
         });
+        const repository =
+          getEnv().GITHUB_AUTH_MODE === 'github_app'
+            ? await prisma.repository.findUnique({
+                where: { userId: user.id },
+              })
+            : null;
+        let appInstallationRemoved: boolean | null = null;
+        if (repository?.installationId) {
+          appInstallationRemoved = await uninstallGithubAppInstallation(
+            repository.installationId,
+            user.githubLogin,
+          ).catch(() => false);
+        }
         let providerRevoked = false;
         if (token) {
           try {
@@ -223,7 +237,16 @@ export function registerAuthRoutes(app: import('express').Express): void {
           }
           await prisma.githubToken.deleteMany({ where: { userId: user.id } });
         }
-        res.status(200).json({ disconnected: true, providerRevoked });
+        if (getEnv().GITHUB_AUTH_MODE === 'github_app') {
+          // Drop the local installation link even if GitHub is temporarily
+          // unavailable, so the worker cannot keep writing after disconnect.
+          await prisma.repository.deleteMany({ where: { userId: user.id } });
+        }
+        res.status(200).json({
+          disconnected: true,
+          providerRevoked,
+          appInstallationRemoved,
+        });
       } catch (error) {
         next(error);
       }
@@ -236,10 +259,22 @@ export function registerAuthRoutes(app: import('express').Express): void {
     requireCsrf,
     async (_req, res, next) => {
       try {
-        const user = res.locals.user as { id: string };
+        const user = res.locals.user as { id: string; githubLogin: string };
         const token = await prisma.githubToken.findUnique({
           where: { userId: user.id },
         });
+        const repository =
+          getEnv().GITHUB_AUTH_MODE === 'github_app'
+            ? await prisma.repository.findUnique({
+                where: { userId: user.id },
+              })
+            : null;
+        if (repository?.installationId) {
+          await uninstallGithubAppInstallation(
+            repository.installationId,
+            user.githubLogin,
+          ).catch(() => false);
+        }
         if (token) {
           try {
             await revokeGithubAuthorization(

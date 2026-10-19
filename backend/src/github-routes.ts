@@ -1,14 +1,25 @@
 import type { Express, Response } from 'express';
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { prisma } from './db.js';
-import { getValidGithubAccessToken } from './auth.js';
+import { getValidGithubAccessToken, OAUTH_STATE_COOKIE } from './auth.js';
 import {
   getGithubRepository,
+  listGithubInstallationRepositories,
   getOrCreateDefaultGithubRepository,
   listGithubRepositories,
 } from './github.js';
+import {
+  buildGithubAppInstallationUrl,
+  createGithubInstallationAccessToken,
+  uninstallGithubAppInstallation,
+} from './github-app.js';
 import { requireAuth, requireCsrf } from './sessions.js';
 import { rateLimit } from './rate-limit.js';
+import { equalSecrets } from './crypto.js';
+import { getEnv } from './config.js';
+
+const INSTALL_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 
 const selectedRepositorySchema = z.object({
   owner: z
@@ -28,6 +39,35 @@ function userIdFromResponse(response: Response): string {
   return (response.locals.user as { id: string }).id;
 }
 
+function setInstallationStateCookie(response: Response, state: string): void {
+  response.cookie(OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: getEnv().NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/github/installation/callback',
+    maxAge: INSTALL_STATE_MAX_AGE_MS,
+  });
+}
+
+function clearInstallationStateCookie(response: Response): void {
+  response.clearCookie(OAUTH_STATE_COOKIE, {
+    httpOnly: true,
+    secure: getEnv().NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/github/installation/callback',
+  });
+}
+
+function installationCallbackUrl(
+  result: 'success' | 'error',
+  code?: string,
+): string {
+  const url = new URL('/', getEnv().FRONTEND_ORIGIN);
+  url.searchParams.set('github_install', result);
+  if (code) url.searchParams.set('code', code);
+  return url.toString();
+}
+
 async function accessTokenOrRespond(
   userId: string,
   response: Response,
@@ -41,6 +81,149 @@ async function accessTokenOrRespond(
 }
 
 export function registerGithubRoutes(app: Express): void {
+  app.get(
+    '/api/github/installation/start',
+    requireAuth,
+    async (_req, res, next) => {
+      try {
+        if (getEnv().GITHUB_AUTH_MODE !== 'github_app') {
+          res.status(404).json({ error: 'GITHUB_APP_NOT_CONFIGURED' });
+          return;
+        }
+        const userId = userIdFromResponse(res);
+        const [repository, leetcode] = await Promise.all([
+          prisma.repository.findUnique({ where: { userId } }),
+          prisma.leetcodeConnection.findUnique({
+            where: { userId },
+            select: { status: true },
+          }),
+        ]);
+        if (!repository) {
+          res.status(409).json({ error: 'GITHUB_REPOSITORY_SETUP_REQUIRED' });
+          return;
+        }
+        if (leetcode?.status !== 'ACTIVE') {
+          res.status(409).json({ error: 'LEETCODE_CONNECTION_REQUIRED' });
+          return;
+        }
+        const state = randomBytes(32).toString('base64url');
+        setInstallationStateCookie(res, state);
+        res.status(200).json({
+          url: buildGithubAppInstallationUrl(state),
+        });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  app.get(
+    '/api/github/installation/callback',
+    requireAuth,
+    async (req, res, next) => {
+      try {
+        const state =
+          typeof req.query.state === 'string' ? req.query.state : null;
+        const storedState = req.cookies?.[OAUTH_STATE_COOKIE] as
+          string | undefined;
+        clearInstallationStateCookie(res);
+        if (!state || !storedState || !equalSecrets(state, storedState)) {
+          res.redirect(
+            302,
+            installationCallbackUrl('error', 'installation_state_invalid'),
+          );
+          return;
+        }
+
+        const installationIdText =
+          typeof req.query.installation_id === 'string'
+            ? req.query.installation_id
+            : '';
+        if (
+          !/^\d+$/.test(installationIdText) ||
+          !['install', 'update'].includes(String(req.query.setup_action))
+        ) {
+          res.redirect(
+            302,
+            installationCallbackUrl('error', 'installation_incomplete'),
+          );
+          return;
+        }
+
+        const user = res.locals.user as { id: string; githubLogin: string };
+        const userId = user.id;
+        const [repository, accessToken] = await Promise.all([
+          prisma.repository.findUnique({ where: { userId } }),
+          getValidGithubAccessToken(userId),
+        ]);
+        if (!repository || !accessToken) {
+          res.redirect(
+            302,
+            installationCallbackUrl('error', 'github_reauth_required'),
+          );
+          return;
+        }
+
+        const installationId = BigInt(installationIdText);
+        const installedRepositories = await listGithubInstallationRepositories(
+          accessToken,
+          installationId,
+        );
+        if (
+          installedRepositories.length !== 1 ||
+          installedRepositories[0]?.id !== Number(repository.githubRepoId)
+        ) {
+          const removed = await uninstallGithubAppInstallation(
+            installationId,
+            user.githubLogin,
+          ).catch(() => false);
+          res.redirect(
+            302,
+            installationCallbackUrl(
+              'error',
+              removed
+                ? 'installation_removed_wrong_selection'
+                : 'remove_installation_from_github_settings',
+            ),
+          );
+          return;
+        }
+
+        const installationToken = await createGithubInstallationAccessToken(
+          installationId,
+          repository.githubRepoId,
+        );
+        const remoteRepository = await getGithubRepository(
+          installationToken,
+          repository.owner,
+          repository.name,
+        );
+        if (
+          remoteRepository.private ||
+          remoteRepository.archived ||
+          remoteRepository.permissions?.push !== true
+        ) {
+          res.redirect(
+            302,
+            installationCallbackUrl('error', 'repository_write_unavailable'),
+          );
+          return;
+        }
+
+        await prisma.repository.update({
+          where: { userId },
+          data: {
+            installationId,
+            branch: remoteRepository.default_branch,
+          },
+        });
+        res.redirect(302, installationCallbackUrl('success'));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
   app.post(
     '/api/github/repository/ensure',
     requireAuth,
@@ -58,6 +241,9 @@ export function registerGithubRoutes(app: Express): void {
             name: existing.name,
             branch: existing.branch,
             url: `https://github.com/${existing.owner}/${existing.name}`,
+            installationRequired:
+              getEnv().GITHUB_AUTH_MODE === 'github_app' &&
+              existing.installationId === null,
           });
           return;
         }
@@ -97,6 +283,7 @@ export function registerGithubRoutes(app: Express): void {
           name: repository.name,
           branch: repository.default_branch,
           url: repository.html_url,
+          installationRequired: getEnv().GITHUB_AUTH_MODE === 'github_app',
         });
       } catch (error) {
         if (error instanceof Error) {
@@ -111,6 +298,12 @@ export function registerGithubRoutes(app: Express): void {
           if (error.message.includes('No extra repository was created')) {
             res.status(409).json({
               error: 'GITHUB_REPOSITORY_NAME_UNAVAILABLE',
+            });
+            return;
+          }
+          if (error.message.includes('GitHub request failed (403)')) {
+            res.status(409).json({
+              error: 'GITHUB_REPOSITORY_CREATE_PERMISSION_REQUIRED',
             });
             return;
           }
@@ -160,6 +353,9 @@ export function registerGithubRoutes(app: Express): void {
               name: repository.name,
               branch: repository.branch,
               url: `https://github.com/${repository.owner}/${repository.name}`,
+              installed:
+                getEnv().GITHUB_AUTH_MODE !== 'github_app' ||
+                repository.installationId !== null,
             }
           : null,
       });
@@ -183,6 +379,15 @@ export function registerGithubRoutes(app: Express): void {
         const userId = userIdFromResponse(res);
         const accessToken = await accessTokenOrRespond(userId, res);
         if (!accessToken) return;
+        const user = res.locals.user as { githubLogin: string };
+        if (
+          getEnv().GITHUB_AUTH_MODE === 'github_app' &&
+          (parsed.data.owner.toLowerCase() !== user.githubLogin.toLowerCase() ||
+            parsed.data.name.toLowerCase() !== 'leetcode-solutions')
+        ) {
+          res.status(403).json({ error: 'CANONICAL_REPOSITORY_REQUIRED' });
+          return;
+        }
         const repository = await getGithubRepository(
           accessToken,
           parsed.data.owner,

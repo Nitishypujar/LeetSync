@@ -1,6 +1,8 @@
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { healthResponseSchema } from '@leetsync/shared';
 import { registerAuthRoutes } from './auth.js';
 import { registerGithubRoutes } from './github-routes.js';
@@ -76,6 +78,26 @@ export function createApp(): express.Express {
   registerLeetcodeRoutes(app);
   registerExtensionRoutes(app);
   registerDashboardRoutes(app);
+
+  if (getEnv().NODE_ENV === 'production') {
+    const frontendDirectory = resolve(
+      fileURLToPath(new URL('.', import.meta.url)),
+      '../../frontend/dist',
+    );
+    app.use(
+      express.static(frontendDirectory, {
+        index: false,
+        maxAge: '1d',
+        etag: true,
+      }),
+    );
+    app.get(/^\/(?!api(?:\/|$)|health$).*/, (_req, res, next) => {
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(resolve(frontendDirectory, 'index.html'), (error) => {
+        if (error) next(error);
+      });
+    });
+  }
 
   app.use(
     (

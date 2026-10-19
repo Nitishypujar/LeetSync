@@ -7,7 +7,8 @@ import {
 } from 'react';
 
 const API_BASE = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.DEV ? 'http://localhost:3000' : '')
 ).replace(/\/$/, '');
 const EXTENSION_ID = import.meta.env.VITE_EXTENSION_ID || '';
 let csrfToken = '';
@@ -27,6 +28,7 @@ type DashboardData = {
     name: string;
     branch: string;
     url: string;
+    installed: boolean;
   } | null;
   extension: { paired: boolean; connected: boolean; lastSeenAt: string | null };
   counts: { total: number; jobs: Record<string, number> };
@@ -119,7 +121,9 @@ function friendlyError(error: unknown): string {
   const messages: Record<string, string> = {
     GITHUB_REAUTH_REQUIRED: 'Reconnect GitHub to continue syncing.',
     GITHUB_REPOSITORY_SETUP_FAILED:
-      'GitHub could not create the public solution repository. Check that the OAuth app has the `public_repo` scope and retry.',
+      'GitHub could not create the public solution repository. Check the GitHub connection and retry.',
+    GITHUB_REPOSITORY_CREATE_PERMISSION_REQUIRED:
+      'The GitHub App needs Repository creation write permission to create the single solution repository.',
     GITHUB_DEFAULT_REPOSITORY_UNAVAILABLE:
       'Your existing leetcode-solutions repository must be public, active, and writable. LeetSync did not create another repository.',
     GITHUB_REPOSITORY_NAME_UNAVAILABLE:
@@ -161,6 +165,7 @@ function App() {
   const ensureAttempted = useRef(false);
   const pairingInProgress = useRef(false);
   const pairingDone = useRef(false);
+  const pairingToken = useRef<string | null>(null);
 
   const loadDashboard = useCallback(async (initial = false) => {
     try {
@@ -181,15 +186,24 @@ function App() {
       if (
         data.github.connected &&
         data.leetcode?.connected &&
-        !data.repository &&
+        (!data.repository || !data.repository.installed) &&
         !ensureAttempted.current
       ) {
         ensureAttempted.current = true;
         try {
-          await request('/api/github/repository/ensure', {
+          const setup = await request<{
+            installationRequired?: boolean;
+          }>('/api/github/repository/ensure', {
             method: 'POST',
             body: '{}',
           });
+          if (setup.installationRequired) {
+            const install = await request<{ url: string }>(
+              '/api/github/installation/start',
+            );
+            window.location.assign(install.url);
+            return;
+          }
           const refreshed = await request<DashboardData>('/api/dashboard');
           setDashboard(refreshed);
         } catch (setupError) {
@@ -224,7 +238,31 @@ function App() {
           : 'GitHub sign-in did not complete. Please try again.',
       );
     }
-    if (auth) window.history.replaceState({}, '', window.location.pathname);
+    const query = new URLSearchParams(window.location.search);
+    const installation = query.get('github_install');
+    const installationCode = query.get('code');
+    if (installation === 'success') {
+      setNotice('GitHub repository access is connected.');
+    } else if (installation === 'error') {
+      const messages: Record<string, string> = {
+        installation_removed_wrong_selection:
+          'LeetSync removed its installation because more than the solution repository was selected. Try again and select only leetcode-solutions.',
+        remove_installation_from_github_settings:
+          'The GitHub App was granted broader repository access and LeetSync could not automatically remove it. Remove the app in GitHub settings before trying again.',
+        github_reauth_required:
+          'Reconnect GitHub, then connect the solution repository again.',
+        repository_write_unavailable:
+          'The solution repository needs Contents write permission and must be public and active.',
+      };
+      errorSource.current = 'setup';
+      setError(
+        messages[installationCode ?? ''] ??
+          'GitHub repository access setup did not complete. Please try again.',
+      );
+    }
+    if (auth || installation) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     void loadDashboard(true);
   }, [loadDashboard]);
 
@@ -238,6 +276,9 @@ function App() {
     if (!dashboard?.github.connected || !dashboard.leetcode) {
       pairingDone.current = false;
       return;
+    }
+    if (!dashboard.leetcode.connected || !dashboard.extension.paired) {
+      pairingDone.current = false;
     }
     let stopped = false;
     const attemptPairing = async () => {
@@ -254,17 +295,19 @@ function App() {
           }
           return;
         }
-        const issued = await request<{ token: string }>(
-          '/api/extension/handshake',
-          {
-            method: 'POST',
-            body: JSON.stringify({ extensionVersion: hello.version }),
-          },
-        );
+        const issuedToken = pairingToken.current
+          ? pairingToken.current
+          : (
+              await request<{ token: string }>('/api/extension/handshake', {
+                method: 'POST',
+                body: JSON.stringify({ extensionVersion: hello.version }),
+              })
+            ).token;
+        pairingToken.current = issuedToken;
         const linked = await extensionMessage({
           type: 'LEETSYNC_TOKEN',
-          token: issued.token,
-          apiBase: API_BASE,
+          token: issuedToken,
+          apiBase: API_BASE || window.location.origin,
         });
         if (!linked?.saved) {
           errorSource.current = 'pairing';
@@ -273,10 +316,12 @@ function App() {
           );
           return;
         }
+        if (!linked.matched) return;
         await request('/api/extension/handshake/complete', {
           method: 'POST',
-          body: JSON.stringify({ token: issued.token }),
+          body: JSON.stringify({ token: issuedToken }),
         });
+        pairingToken.current = null;
         if (errorSource.current === 'pairing') {
           errorSource.current = null;
           setError('');
@@ -284,6 +329,16 @@ function App() {
         pairingDone.current = true;
         await loadDashboard();
       } catch (pairError) {
+        if (
+          pairError instanceof Error &&
+          pairError.message === 'LEETCODE_ACCOUNT_NOT_DETECTED'
+        )
+          return;
+        if (
+          pairError instanceof Error &&
+          pairError.message === 'EXTENSION_HANDSHAKE_EXPIRED'
+        )
+          pairingToken.current = null;
         errorSource.current = 'pairing';
         setError(friendlyError(pairError));
       } finally {
@@ -298,6 +353,10 @@ function App() {
     };
   }, [
     dashboard?.github.connected,
+    dashboard?.leetcode?.connected,
+    dashboard?.leetcode?.detectedUsername,
+    dashboard?.extension.connected,
+    dashboard?.extension.paired,
     dashboard?.leetcode?.username,
     loadDashboard,
   ]);
@@ -362,14 +421,14 @@ function App() {
     )
       return;
     void run(async () => {
-      const result = await request<{ providerRevoked: boolean }>(
-        '/api/auth/disconnect-github',
-        { method: 'POST', body: '{}' },
-      );
+      const result = await request<{
+        providerRevoked: boolean;
+        appInstallationRemoved?: boolean | null;
+      }>('/api/auth/disconnect-github', { method: 'POST', body: '{}' });
       setNotice(
-        result.providerRevoked
+        result.providerRevoked || result.appInstallationRemoved === true
           ? 'GitHub disconnected.'
-          : 'GitHub disconnected in LeetSync. You can also remove the app from GitHub settings.',
+          : 'GitHub disconnected in LeetSync. If the app could not be reached, remove LeetSync from GitHub settings too.',
       );
     });
   };
@@ -573,10 +632,14 @@ function App() {
               )}
             </div>
             <div className="check-row">
-              <Status ok={Boolean(dashboard.repository)}>
+              <Status
+                ok={Boolean(
+                  dashboard.repository && dashboard.repository.installed,
+                )}
+              >
                 Solution repository ready
               </Status>
-              {dashboard.repository ? (
+              {dashboard.repository?.installed ? (
                 <a
                   href={dashboard.repository.url}
                   target="_blank"
@@ -590,18 +653,28 @@ function App() {
                   className="text-button"
                   onClick={() =>
                     void run(async () => {
-                      await request('/api/github/repository/ensure', {
+                      const setup = await request<{
+                        installationRequired?: boolean;
+                      }>('/api/github/repository/ensure', {
                         method: 'POST',
                         body: '{}',
                       });
+                      if (setup.installationRequired) {
+                        const install = await request<{ url: string }>(
+                          '/api/github/installation/start',
+                        );
+                        window.location.assign(install.url);
+                      }
                     })
                   }
                 >
-                  Retry setup
+                  {dashboard.repository ? 'Connect repository' : 'Retry setup'}
                 </button>
               ) : (
                 <span>
-                  Connect GitHub and verify LeetCode to create your repository.
+                  {dashboard.repository
+                    ? 'Connect GitHub and verify LeetCode to finish repository setup.'
+                    : 'Connect GitHub and verify LeetCode to create your repository.'}
                 </span>
               )}
             </div>

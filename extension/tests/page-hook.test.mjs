@@ -155,6 +155,16 @@ test('manifest keeps browser permissions minimal and restricts supported hosts',
   assert.deepEqual(manifest.permissions, ['storage', 'alarms']);
   assert.ok(manifest.host_permissions.includes('https://leetcode.com/*'));
   assert.ok(manifest.host_permissions.includes('https://leetcode.cn/*'));
+  assert.ok(
+    manifest.host_permissions.includes(
+      'https://leetsync-nitishypujar.onrender.com/*',
+    ),
+  );
+  assert.ok(
+    manifest.externally_connectable.matches.includes(
+      'https://leetsync-nitishypujar.onrender.com/*',
+    ),
+  );
   assert.ok(!manifest.permissions.includes('cookies'));
   assert.ok(!manifest.permissions.includes('debugger'));
 });

@@ -9,7 +9,7 @@
 ## Account linking and security
 
 - GitHub OAuth is the only sign-in method. OAuth state is browser-bound, sessions are 30-day HttpOnly SameSite cookies, and state-changing cookie requests require CSRF validation.
-- The app requests GitHub's `repo` scope, encrypts provider tokens at rest with AES-256-GCM, and never returns them to the dashboard.
+- Local development defaults to classic GitHub OAuth with `public_repo`; production is intended to use GitHub App user authorization plus a repository-scoped installation token. Provider tokens are encrypted at rest with AES-256-GCM and never returned to the dashboard.
 - The isolated extension worker reads the LeetCode account using the browser's existing session. The page-world hook relays only a candidate submission ID; after independently verifying the account and newest Accepted result, the worker fetches and sends the source. LeetCode passwords, cookies, and session tokens are never sent to the API.
 - The extension token is random, per user, stored as a hash, and revocable. Dashboard-to-extension token delivery uses external messaging restricted to configured origins and a short-lived dashboard-authenticated handshake.
 - API CORS is allowlisted to the dashboard origin and the one configured extension ID. Cookie-authenticated writes use CSRF protection; extension writes require a bearer token. Inputs are schema-validated and rate-limited.

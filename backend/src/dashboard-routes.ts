@@ -2,6 +2,7 @@ import type { Express, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from './db.js';
 import { requireAuth, requireCsrf } from './sessions.js';
+import { getEnv } from './config.js';
 
 function plainSyncError(value: string | null): string | null {
   if (!value) return null;
@@ -106,6 +107,9 @@ export function registerDashboardRoutes(app: Express): void {
               name: repo.name,
               branch: repo.branch,
               url: `https://github.com/${repo.owner}/${repo.name}`,
+              installed:
+                getEnv().GITHUB_AUTH_MODE !== 'github_app' ||
+                repo.installationId !== null,
             }
           : null,
         extension: {

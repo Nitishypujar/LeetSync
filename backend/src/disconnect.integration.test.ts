@@ -24,6 +24,92 @@ beforeAll(() => {
 });
 
 testSuite('LeetCode disconnect', () => {
+  it('requires a dashboard session to activate a matching heartbeat', async () => {
+    const githubUserId = BigInt(
+      790000000000000 + Math.floor(Math.random() * 1000000),
+    );
+    const username = `secure-link-${githubUserId}`;
+    const rawSession = `test-session-${randomBytes(24).toString('hex')}`;
+    const rawExtensionToken = `lsx_ext_${randomBytes(32).toString('base64url')}`;
+    const csrfToken = randomBytes(24).toString('base64url');
+    const user = await prisma.user.create({
+      data: {
+        githubUserId,
+        githubLogin: `secure-link-${githubUserId}`,
+        leetcodeConnection: {
+          create: {
+            leetcodeIdentity: username,
+            leetcodeUsername: username,
+            status: 'PENDING',
+          },
+        },
+        extensionTokens: {
+          create: { tokenHash: hashToken(rawExtensionToken) },
+        },
+        sessions: {
+          create: {
+            tokenHash: hashToken(rawSession),
+            expiresAt: new Date(Date.now() + 60_000),
+          },
+        },
+      },
+    });
+
+    try {
+      const app = createApp();
+      const heartbeat = await request(app)
+        .post('/api/extension/heartbeat')
+        .set('Authorization', `Bearer ${rawExtensionToken}`)
+        .send({ leetcodeUsername: username, extensionVersion: 'test' });
+      expect(heartbeat.status).toBe(200);
+      expect(heartbeat.body).toEqual({
+        linked: false,
+        confirmationRequired: true,
+        mismatch: false,
+      });
+      expect(
+        (
+          await prisma.leetcodeConnection.findUnique({
+            where: { userId: user.id },
+          })
+        )?.status,
+      ).toBe('PENDING');
+
+      const verify = await request(app)
+        .post('/api/extension/handshake/complete')
+        .set('Cookie', [
+          `leetsync_session=${rawSession}`,
+          `leetsync_csrf=${csrfToken}`,
+        ])
+        .set('X-CSRF-Token', csrfToken)
+        .send({ token: rawExtensionToken });
+      expect(verify.status).toBe(204);
+      const verified = await prisma.leetcodeConnection.findUnique({
+        where: { userId: user.id },
+      });
+      expect(verified?.status).toBe('ACTIVE');
+      expect(verified?.verifiedAt).toBeInstanceOf(Date);
+
+      const mismatch = await request(app)
+        .post('/api/extension/heartbeat')
+        .set('Authorization', `Bearer ${rawExtensionToken}`)
+        .send({ leetcodeUsername: `${username}-other` });
+      expect(mismatch.status).toBe(200);
+      expect(mismatch.body).toEqual({
+        linked: false,
+        confirmationRequired: false,
+        mismatch: true,
+      });
+      const deactivated = await prisma.leetcodeConnection.findUnique({
+        where: { userId: user.id },
+      });
+      expect(deactivated?.status).toBe('PENDING');
+      expect(deactivated?.verifiedAt).toBeNull();
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
+    }
+  });
+
   it('removes the LeetCode link and revokes extension tokens without deleting the account', async () => {
     const githubUserId = BigInt(
       800000000000000 + Math.floor(Math.random() * 1000000),

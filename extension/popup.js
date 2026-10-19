@@ -15,6 +15,36 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function configuredDashboardUrl() {
+  const matches =
+    chrome.runtime.getManifest().externally_connectable?.matches ?? [];
+  for (const pattern of matches) {
+    try {
+      const url = new URL(pattern.replace(/\/\*$/, ''));
+      if (url.protocol === 'https:') return url.origin;
+    } catch {
+      // Ignore invalid manifest entries and try the next declared origin.
+    }
+  }
+  return 'http://localhost:5173';
+}
+
+function dashboardUrlForApi(apiBase) {
+  const configured = configuredDashboardUrl();
+  try {
+    const api = new URL(apiBase);
+    if (api.origin === 'https://api.leetsync.app') {
+      return 'https://app.leetsync.app';
+    }
+    if (api.hostname === 'localhost' || api.hostname === '127.0.0.1') {
+      return `http://${api.hostname}:5173`;
+    }
+    return api.origin;
+  } catch {
+    return configured;
+  }
+}
+
 async function refresh() {
   const state = await chrome.storage.local.get({
     apiBase: 'http://localhost:3000',
@@ -40,6 +70,8 @@ async function refresh() {
       'Server unavailable. Submissions are buffered for retry.',
     'waiting-username':
       state.lastError || 'Save your LeetCode username in the dashboard.',
+    'waiting-dashboard':
+      state.lastError || 'Open the dashboard to finish linking this account.',
     'not-linked':
       state.lastError ||
       'Open the dashboard to link this extension automatically.',
@@ -52,9 +84,15 @@ async function refresh() {
     labels[state.extensionStatus] || 'Open LeetCode to detect your account.';
 }
 
-document.querySelector('#open-dashboard').addEventListener('click', () => {
-  chrome.tabs.create({ url: 'http://localhost:5173' });
-});
+document
+  .querySelector('#open-dashboard')
+  .addEventListener('click', async () => {
+    const state = await chrome.storage.local.get(['apiBase']);
+    const dashboardUrl = state.apiBase
+      ? dashboardUrlForApi(state.apiBase)
+      : configuredDashboardUrl();
+    chrome.tabs.create({ url: dashboardUrl });
+  });
 
 disconnect.addEventListener('click', async () => {
   if (

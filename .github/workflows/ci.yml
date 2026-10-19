@@ -51,4 +51,7 @@ jobs:
       - name: Build API and worker image
         run: docker build -f backend/Dockerfile -t leetsync-api .
       - name: Build dashboard image
-        run: docker build -f frontend/Dockerfile -t leetsync-frontend .
+        run: >-
+          docker build -f frontend/Dockerfile
+          --build-arg VITE_API_BASE_URL=https://leetsync-nitishypujar.onrender.com
+          -t leetsync-frontend .

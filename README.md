@@ -28,12 +28,14 @@ docker compose up --build -d
 
 The API applies Prisma migrations automatically before starting. Open `http://localhost:5173`; API health is at `http://localhost:3000/health`. The Compose PostgreSQL volume survives container restarts and `docker compose down`. `docker compose down -v` removes that database volume and all stored LeetSync data.
 
+The frontend container builds its Content Security Policy from `VITE_API_BASE_URL`. A standalone dashboard image build rejects localhost API URLs unless `LEETSYNC_ALLOW_LOCAL_API_URL=true`; the included Compose file opts in because it is for local development. For a public build, set the HTTPS API URL and keep the local-URL override disabled.
+
 ## Connect your accounts
 
 1. Select **Sign in with GitHub**. This alone does not create a repository.
 2. Enter your LeetCode username on the dashboard.
 3. In Chrome or Edge, open `chrome://extensions` or `edge://extensions`, enable **Developer mode**, and choose **Load unpacked**. Select this repository's `extension` folder.
-4. Open LeetCode in that browser. When the extension verifies the matching LeetCode username, LeetSync creates or reuses exactly one public `leetcode-solutions` repository. If that exact name is unavailable, setup stops instead of creating a second repository.
+4. Open LeetCode in that browser. After the matching LeetCode account is verified, LeetSync creates or reuses exactly one public `leetcode-solutions` repository. In GitHub App mode, it then asks you to install the app with access only to that repository. If the exact repository name is unavailable, setup stops instead of creating a second repository.
 
 The extension uses `storage` and `alarms`, and has host access only to LeetCode and the configured LeetSync API. The stable unpacked extension ID is `nadlcboffmafknogdcgohdcledaomppo`; the dashboard origin is separately listed for external messaging. If you change the extension manifest key or dashboard origin, update `EXTENSION_ID`, `VITE_EXTENSION_ID`, the extension's `externally_connectable.matches`, and the API CORS allowlist together.
 
@@ -89,7 +91,7 @@ Do not point these tests at a hosted or user database; they create and delete te
 
 ## Troubleshooting
 
-- **GitHub repository setup fails:** Reconnect and approve the OAuth app's `repo` scope. The callback URL must exactly match the value above.
+- **GitHub repository setup fails:** In local OAuth mode, reconnect and approve the OAuth app's `public_repo` scope. For production GitHub App mode, confirm the app has Repository creation write permission, Contents write, the exact callback/setup URLs, and installation access only to `leetcode-solutions`.
 - **Extension is not detected:** Keep the dashboard and LeetCode open in the same browser profile, reload the dashboard once, and refresh a LeetCode problem page.
 - **Username mismatch:** Sign in to the LeetCode account matching the saved username, or save the correct username on the dashboard.
 - **A submission needs attention:** Reconnect GitHub if requested, then select **Retry** in the sync history.
@@ -101,3 +103,5 @@ Do not point these tests at a hosted or user database; they create and delete te
 LeetCode does not provide a supported public API for this integration. Detection relies on the current LeetCode page, its account-status query, and its submission response shapes, which can change. The extension reports only the logged-in username and Accepted submission data; it does not read or transmit LeetCode cookies or credentials. There is no Chrome Web Store listing yet; use the unpacked extension instructions above.
 
 The rate limiter is process-local, so a multi-instance deployment needs a shared limiter. Historical submission backfill is not included.
+
+For production configuration and release order, see [the deployment runbook](docs/PRODUCTION_DEPLOYMENT.md) and [current release readiness](docs/RELEASE_STATUS.md).

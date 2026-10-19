@@ -21,11 +21,19 @@ function withPendingQueueLock(operation) {
 
 function allowedDashboard(sender) {
   try {
-    return [
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'https://app.leetsync.app',
-    ].includes(new URL(sender.url).origin);
+    const origin = new URL(sender.url).origin;
+    const matches =
+      chrome.runtime.getManifest().externally_connectable?.matches;
+    return (
+      Array.isArray(matches) &&
+      matches.some((pattern) => {
+        try {
+          return new URL(pattern.replace(/\/\*$/, '')).origin === origin;
+        } catch {
+          return false;
+        }
+      })
+    );
   } catch {
     return false;
   }
@@ -39,7 +47,18 @@ function allowedApi(value) {
       !url.password &&
       ((url.protocol === 'http:' &&
         ['localhost', '127.0.0.1'].includes(url.hostname)) ||
-        (url.protocol === 'https:' && url.hostname === 'api.leetsync.app'))
+        url.protocol === 'https:') &&
+      chrome.runtime.getManifest().host_permissions.some((pattern) => {
+        try {
+          const allowedOrigin = new URL(pattern.replace(/\/\*$/, '')).origin;
+          return (
+            allowedOrigin === url.origin &&
+            !['leetcode.com', 'leetcode.cn'].includes(url.hostname)
+          );
+        } catch {
+          return false;
+        }
+      })
     );
   } catch {
     return false;
@@ -324,7 +343,12 @@ async function sendHeartbeat(username) {
         'mismatch',
         'The LeetCode username does not match the dashboard.',
       );
-      return { mismatch: true };
+      return { matched: false, mismatch: true };
+    } else if (body.confirmationRequired) {
+      await setStatus(
+        'waiting-dashboard',
+        'Account detected. Keep the LeetSync dashboard open to finish linking.',
+      );
     } else if (!body.linked) {
       await setStatus(
         'waiting-username',
@@ -340,14 +364,17 @@ async function sendHeartbeat(username) {
         await setStatus('connected');
     }
     if (body.linked) void flushPending();
-    return { mismatch: false };
+    return {
+      matched: Boolean(body.linked || body.confirmationRequired),
+      mismatch: false,
+    };
   } catch {
     await chrome.storage.local.set({ detectedUsername: username });
     await setStatus(
       'offline',
       'LeetSync server is unavailable. Saved submissions will retry automatically.',
     );
-    return { mismatch: false };
+    return { matched: false, mismatch: false };
   }
 }
 
@@ -447,9 +474,14 @@ async function flushPendingLocked() {
         response.status === 409 &&
         body.error === 'LEETCODE_ACCOUNT_NOT_LINKED'
       ) {
+        const latest = await getState();
         await setStatus(
-          'waiting-username',
-          'Save your LeetCode username in the dashboard to finish linking.',
+          latest.extensionStatus === 'waiting-dashboard'
+            ? 'waiting-dashboard'
+            : 'waiting-username',
+          latest.extensionStatus === 'waiting-dashboard'
+            ? 'Keep the LeetSync dashboard open to finish linking this account.'
+            : 'Save your LeetCode username in the dashboard to finish linking.',
         );
         break;
       }
@@ -611,10 +643,15 @@ chrome.runtime.onMessageExternal.addListener(
         .set({ apiBase: new URL(apiBase).origin, extensionToken: token })
         .then(async () => {
           await setStatus('waiting-username');
-          sendResponse({ saved: true });
           const state = await getState();
-          if (state.detectedUsername)
-            void sendHeartbeat(state.detectedUsername);
+          const heartbeat = state.detectedUsername
+            ? await sendHeartbeat(state.detectedUsername)
+            : null;
+          sendResponse({
+            saved: true,
+            matched: Boolean(heartbeat?.matched),
+            mismatch: Boolean(heartbeat?.mismatch),
+          });
           void flushPending();
         });
       return true;

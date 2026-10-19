@@ -78,12 +78,13 @@ model ExtensionToken {
 }
 
 model Repository {
-  userId       String @id @map("user_id") @db.Uuid
-  githubRepoId BigInt @unique @map("github_repo_id")
-  owner        String @db.VarChar(255)
-  name         String @db.VarChar(255)
-  branch       String @db.VarChar(255)
-  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String @id @map("user_id") @db.Uuid
+  githubRepoId   BigInt @unique @map("github_repo_id")
+  installationId BigInt? @map("installation_id")
+  owner          String @db.VarChar(255)
+  name           String @db.VarChar(255)
+  branch         String @db.VarChar(255)
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("repositories")
 }

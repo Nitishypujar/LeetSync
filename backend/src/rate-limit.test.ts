@@ -5,12 +5,16 @@ import { rateLimit } from './rate-limit.js';
 function invoke(
   middleware: ReturnType<typeof rateLimit>,
   userId?: string,
+  ip = '10.0.0.2',
+  cfConnectingIp?: string,
 ): { next: ReturnType<typeof vi.fn>; status: number | null } {
   const next = vi.fn<NextFunction>();
   let status: number | null = null;
   const request = {
-    ip: '10.0.0.2',
-    socket: { remoteAddress: '10.0.0.2' },
+    ip,
+    socket: { remoteAddress: ip },
+    get: (name: string) =>
+      name.toLowerCase() === 'cf-connecting-ip' ? cfConnectingIp : undefined,
   } as Request;
   const response = {
     locals: userId ? { user: { id: userId } } : {},
@@ -40,5 +44,36 @@ describe('route rate limits', () => {
     expect(invoke(middleware, 'user-a').status).toBeNull();
     expect(invoke(middleware, 'user-b').status).toBeNull();
     expect(invoke(middleware, 'user-a').status).toBe(429);
+  });
+
+  it('uses a valid Cloudflare client IP only when explicitly trusted', () => {
+    const middleware = rateLimit(1, 60_000, { trustCloudflareIp: true });
+    expect(
+      invoke(middleware, undefined, '10.0.0.2', '203.0.113.1').status,
+    ).toBe(null);
+    expect(
+      invoke(middleware, undefined, '10.0.0.2', '203.0.113.2').status,
+    ).toBe(null);
+    expect(
+      invoke(middleware, undefined, '10.0.0.2', '203.0.113.1').status,
+    ).toBe(429);
+  });
+
+  it('ignores malformed Cloudflare addresses and bounds its bucket map', () => {
+    const malformedHeader = rateLimit(1, 60_000, {
+      trustCloudflareIp: true,
+    });
+    expect(
+      invoke(malformedHeader, undefined, '10.0.0.2', 'not-an-ip').status,
+    ).toBeNull();
+    expect(
+      invoke(malformedHeader, undefined, '10.0.0.2', 'also-not-an-ip').status,
+    ).toBe(429);
+
+    const bounded = rateLimit(1, 60_000, { maxBuckets: 2 });
+    expect(invoke(bounded, undefined, '10.0.0.1').status).toBeNull();
+    expect(invoke(bounded, undefined, '10.0.0.2').status).toBeNull();
+    expect(invoke(bounded, undefined, '10.0.0.3').status).toBeNull();
+    expect(invoke(bounded, undefined, '10.0.0.1').status).toBeNull();
   });
 });

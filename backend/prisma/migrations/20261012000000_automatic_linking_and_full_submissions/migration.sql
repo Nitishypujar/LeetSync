@@ -13,6 +13,3 @@ ALTER TABLE "problems"
 ALTER TABLE "submissions"
   ADD COLUMN "runtime" VARCHAR(100) NOT NULL DEFAULT '',
   ADD COLUMN "memory" VARCHAR(100) NOT NULL DEFAULT '';
-
-DROP TABLE IF EXISTS "extension_pairing_codes";
-DROP TABLE IF EXISTS "verification_challenges";

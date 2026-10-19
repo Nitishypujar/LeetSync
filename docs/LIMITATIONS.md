@@ -10,24 +10,24 @@
 ## Browser and provider checks
 
 - Unit and API tests cover GitHub OAuth state handling, repository provisioning, commit construction, and extension payload validation.
-- GitHub OAuth, public repository provisioning, and a representative worker-to-GitHub commit were verified against the connected account. The commit used a clearly labeled synthetic fixture. A real LeetCode Accepted capture with the current extension version still needs a fresh check: the Edge browser is available, but its internal extension page could not be inspected during the latest verification, and no new Accepted submission was made.
+- Classic GitHub OAuth, public repository provisioning, and a representative worker-to-GitHub commit were verified against the connected account. The commit used a clearly labeled synthetic fixture. The new GitHub App installation flow has unit coverage but still needs a registered-App end-to-end check. A real LeetCode Accepted capture with the current extension version also needs a fresh check.
 - Historical submission backfill and pagination are not implemented.
 
 ## Database and deployment
 
 - Database integration tests use a disposable PostgreSQL database and are skipped unless `RUN_DB_TESTS=true`. CI applies the Prisma migrations to a disposable PostgreSQL service before running them.
 - The app uses an in-process rate limiter. A multi-instance deployment needs a shared limiter or equivalent edge protection.
-- The supplied migration removes obsolete challenge and pairing-code tables. Apply migrations through the documented deployment process before starting a release against an existing database.
+- The application no longer reads the legacy challenge and pairing-code tables. The migration preserves these tables and their rows for safe upgrades; they can be removed only in a separately reviewed cleanup after deployment history and retention needs are known.
 - Docker Compose keeps PostgreSQL data in its named volume. Do not remove that volume when updating the application.
 
 ## Dependency audit
 
-- On 2026-10-12, `npm audit --audit-level=moderate` completed with zero known advisories. CI repeats this check. A root npm override pins Prisma CLI's `deepmerge-ts` dependency to the patched 8.x line; Prisma client generation, production builds, and migrations must be checked again whenever Prisma or the lockfile is updated. A clean audit describes known advisories at that date and is not a guarantee against future or undisclosed issues.
+- On 2026-10-19, `npm audit --audit-level=moderate` completed with zero reported vulnerabilities. CI repeats this check. A root npm override pins Prisma CLI's `deepmerge-ts` dependency to the patched 8.x line; Prisma client generation, production builds, and migrations must be checked again whenever Prisma or the lockfile is updated. A clean audit describes known advisories at that date and is not a guarantee against future or undisclosed issues.
 
 ## Credential handling
 
-Configured `.env` files are local-only and are not included in source control. Rotate any active database password, GitHub OAuth secret, session secret, and token encryption key before sharing an archive that may have contained those files.
+Configured `.env` files are local-only and are not included in source control. The GitHub OAuth secret and database password were reported rotated and the Supabase connection was checked. The session secret and token-encryption key still require rotation before public launch; use the documented token migration for the encryption key.
 
 ## GitHub permission scope
 
-- New GitHub OAuth authorizations request `public_repo`, which can read and write all public repositories available to the authorizing account but does not request private-repository access. Existing authorizations that were granted `repo` retain that broader permission until the user revokes and reconnects. Before a public multi-user release, migrate to a GitHub App with access limited to the selected repository and contents permission only.
+- Default local mode is still classic OAuth with `public_repo`, which can read and write all public repositories available to the authorizing account. GitHub App mode omits that scope, requests `Repository creation: write` plus `Metadata: read-only` for user authorization, and mints `Contents: write` installation tokens limited to the one canonical repository. Revoke old OAuth grants after App verification.

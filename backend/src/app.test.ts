@@ -86,6 +86,7 @@ describe('authenticated API boundaries', () => {
       request(app).get('/api/github/repository'),
       request(app).post('/api/github/repository/ensure'),
       request(app).post('/api/leetcode/username'),
+      request(app).post('/api/extension/handshake/complete'),
       request(app).post('/api/extension/handshake'),
       request(app).post('/api/leetcode/disconnect'),
       request(app).post('/api/extension/revoke'),
