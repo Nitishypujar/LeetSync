@@ -17,8 +17,8 @@ questions into one clear request and keep completing independent work meanwhile.
 - Project: `N:\PROJECTS\LeetSync`
 - Source GitHub repository: `Nitishypujar/LeetSync`
 - Current workspace branch: `integration/assistant-updates-2026-10-13`, at
-  commit `50cf7b3`. Its source is also published to the separate review branch
-  `codex/release-readiness-2026-10-19` (GitHub Actions run 39272475499).
+  commit `cbcee69`. Its source is also published to the separate review branch
+  `codex/release-readiness-2026-10-19` (GitHub Actions run 39276805229).
 - Tracked source changes are committed. Two untracked handoff ZIP archives are
   present locally and were intentionally excluded from the public branch.
   Preserve them unless the user asks to remove them.
@@ -52,8 +52,8 @@ questions into one clear request and keep completing independent work meanwhile.
   hosted Supabase as a substitute for the disposable test DB.
 - The source review branch was pushed after excluding the handoff ZIP archives
   and ignored `.env` files. No merge or deployment was performed. GitHub Actions
-  run 39272475499 passed, including disposable PostgreSQL tests and production
-  container builds. Review it before proposing deployment.
+  run 39276805229 passed for `cbcee69`, including disposable PostgreSQL tests
+  and production container builds. Review it before proposing deployment.
 - `npm audit --audit-level=moderate` completed on 2026-10-19 with zero reported vulnerabilities.
 - Local Docker Compose was brought up successfully on 2026-10-19 using the
   root `.env` and local Compose PostgreSQL. The API `/health` returned HTTP 200
