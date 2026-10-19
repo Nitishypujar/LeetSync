@@ -12,6 +12,7 @@ LeetSync is not ready for a public multi-user release. Core sync flows and isola
 
 - Published the reviewed source and deployment documentation to `codex/release-readiness-2026-10-19`; `main` and the existing integration branch were not changed. Handoff ZIPs and ignored `.env` files were excluded.
 - GitHub Actions run [39272475499](https://github.com/Nitishypujar/LeetSync/actions/runs/39272475499) passed for the review branch, including disposable PostgreSQL tests and production container builds.
+- The Render Blueprint generates a random session secret at service creation; database and GitHub App credentials remain provider-managed secrets.
 - This workspace currently cannot start Docker Desktop (`dockerDesktopLinuxEngine` is unavailable), and direct Docker health checks therefore could not run in this pass.
 
 ## Changes and verification in this pass

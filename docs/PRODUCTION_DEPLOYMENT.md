@@ -84,6 +84,10 @@ settings for the API, worker, and one-off migration job unless noted.
 | `FRONTEND_ORIGIN`        | Exact dashboard origin, with no path or query string                   |
 | `EXTENSION_ID`           | ID from the signed extension package                                   |
 
+The Render Blueprint generates `SESSION_SECRET` automatically as a random
+256-bit value. Provide the database and GitHub App credentials only through
+Render's secret fields; never commit them to this repository.
+
 The backend rejects insecure or localhost public URLs and common example
 placeholders in production mode. Never place secret values in frontend build
 arguments, source control, logs, or this document. Rotating the token

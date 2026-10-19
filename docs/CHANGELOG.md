@@ -19,6 +19,8 @@
 
 ## Review branch update — 2026-10-19
 
+- The Render Blueprint now generates the session secret itself, removing one
+  manually supplied secret while keeping it private in Render.
 - Published the tested source and release documentation to
   `codex/release-readiness-2026-10-19`; no merge or deployment was performed.
 - GitHub Actions run 39272475499 passed, including disposable PostgreSQL tests
