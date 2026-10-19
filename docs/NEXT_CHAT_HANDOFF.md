@@ -16,9 +16,12 @@ questions into one clear request and keep completing independent work meanwhile.
 
 - Project: `N:\PROJECTS\LeetSync`
 - Source GitHub repository: `Nitishypujar/LeetSync`
-- Current branch: `integration/assistant-updates-2026-10-13`
-- The working tree contains extensive uncommitted changes. Preserve them; do
-  not reset, checkout over, or discard them.
+- Current workspace branch: `integration/assistant-updates-2026-10-13`, at
+  commit `50cf7b3`. Its source is also published to the separate review branch
+  `codex/release-readiness-2026-10-19` (GitHub Actions run 39272475499).
+- Tracked source changes are committed. Two untracked handoff ZIP archives are
+  present locally and were intentionally excluded from the public branch.
+  Preserve them unless the user asks to remove them.
 - A source ZIP should include all project source/config/docs and uncommitted
   changes, but must exclude `.git`, all `.env` files (keep `.env.example`),
   `node_modules`, generated `dist`/coverage/build output, `.tmp`, and logs.
@@ -47,6 +50,10 @@ questions into one clear request and keep completing independent work meanwhile.
   Docker images built; the GitHub Actions frontend-image step now supplies the
   required same-origin preview API URL. Never run fixtures or migrations against
   hosted Supabase as a substitute for the disposable test DB.
+- The source review branch was pushed after excluding the handoff ZIP archives
+  and ignored `.env` files. No merge or deployment was performed. GitHub Actions
+  run 39272475499 passed, including disposable PostgreSQL tests and production
+  container builds. Review it before proposing deployment.
 - `npm audit --audit-level=moderate` completed on 2026-10-19 with zero reported vulnerabilities.
 - Local Docker Compose was brought up successfully on 2026-10-19 using the
   root `.env` and local Compose PostgreSQL. The API `/health` returned HTTP 200
@@ -93,14 +100,14 @@ questions into one clear request and keep completing independent work meanwhile.
    secrets into chat. Never run the key migration against the live Supabase
    project without explicit confirmation and a recovery plan.
 3. Register and verify the GitHub App only after the public callback URL is
-   fixed. Prior GitHub authorization was specifically for LeetSync OAuth and
-   creating/testing `leetcode-solutions`; it is not automatic authorization to
-   publish the LeetSync app source or create other public repositories.
-4. Deploy a free preview on Render only after confirming authorization for
-   source publishing/service creation. Render may assign a different host than
-   `render.yaml` expects; set callback and frontend origins to the actual host.
-   Leave auto-deploy disabled until CI is connected. Never deploy secrets in
-   build args or source.
+   fixed. The user previously authorized app registration and a Render preview
+   with auto-deploy disabled. Source publication was separately approved and is
+   now on `codex/release-readiness-2026-10-19`. No app registration or Render
+   resource has yet been created. Never deploy secrets in build args or source.
+4. Render may assign a different host than `render.yaml` expects; set callback
+   and frontend origins to the actual host. The Render connector is not
+   currently available in this Codex session. Do not deploy against the
+   existing hosted Supabase database until its backup and migration gates pass.
 5. Run database integration tests only against a disposable PostgreSQL
    database. The hosted Supabase project is not a test database. Before using
    it for preview, resolve its migration-history mismatch through the verified
