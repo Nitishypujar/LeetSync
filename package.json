@@ -21,7 +21,7 @@
     "format": "prettier --write .",
     "test": "npm run build -w shared && npm run test -w backend && npm run test:extension",
     "pretest": "npm run db:generate",
-    "test:extension": "node --test extension/tests/page-hook.test.mjs extension/tests/background-input.test.mjs extension/tests/popup.test.mjs frontend/tests/configure-nginx.test.mjs",
+    "test:extension": "node --test extension/tests/page-hook.test.mjs extension/tests/background-input.test.mjs extension/tests/popup.test.mjs frontend/tests/configure-nginx.test.mjs frontend/tests/store-links.test.mjs",
     "test:db": "cd backend && npm run test:db",
     "db:generate": "cd backend && npm run prisma:generate",
     "db:migrate": "cd backend && npm run prisma:migrate",

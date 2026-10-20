@@ -849,6 +849,81 @@ body {
   margin-top: 18px;
   padding: 23px;
 }
+.extension-onboarding {
+  border-color: #cfe2d4;
+  background: linear-gradient(135deg, #fbfefb 0%, #f1f8f2 100%);
+}
+.extension-onboarding-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+.extension-onboarding-heading h2 {
+  margin: 0 0 7px;
+  color: #203b2c;
+  font-size: 21px;
+  letter-spacing: -0.04em;
+}
+.extension-onboarding-heading p:not(.eyebrow) {
+  max-width: 620px;
+  margin: 0;
+  color: #63756b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.extension-store-badge {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid #d8e7db;
+  border-radius: 999px;
+  background: #fff;
+  color: #4a7056;
+  font-size: 11px;
+  font-weight: 650;
+}
+.extension-store-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0 17px;
+}
+.extension-store-actions .button {
+  min-height: 45px;
+  font-size: 13px;
+}
+.extension-store-pending {
+  display: inline-flex;
+  min-height: 45px;
+  align-items: center;
+  padding: 0 14px;
+  border: 1px dashed #c9d8cd;
+  border-radius: 8px;
+  color: #718077;
+  font-size: 12px;
+}
+.extension-onboarding-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 15px;
+  border-top: 1px solid #e1ece3;
+}
+.extension-onboarding-footer > span {
+  color: #63756b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.extension-onboarding-footer a {
+  flex: 0 0 auto;
+  color: #34724b;
+  font-size: 12px;
+  font-weight: 650;
+}
+.extension-onboarding-footer a:hover {
+  text-decoration: underline;
+}
 
 .section-title h2 {
   color: #203b2c;
@@ -1030,6 +1105,29 @@ body {
 }
 
 @media (max-width: 600px) {
+  .extension-onboarding-heading {
+    flex-direction: column;
+  }
+
+  .extension-store-badge {
+    align-self: flex-start;
+  }
+
+  .extension-store-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .extension-store-actions .button,
+  .extension-store-pending {
+    justify-content: center;
+  }
+
+  .extension-onboarding-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .legal-card {
     padding: 20px;
   }

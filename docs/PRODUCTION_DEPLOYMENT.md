@@ -66,28 +66,39 @@ and `GITHUB_CALLBACK_URL`, then reload or repackage the extension.
 Set these in the hosting provider's secret manager. Use the same backend
 settings for the API, worker, and one-off migration job unless noted.
 
-| Variable                 | Production value                                                       |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `NODE_ENV`               | `production`                                                           |
-| `PORT`                   | The port required by the hosting platform                              |
-| `RUN_SYNC_WORKER`        | `true` only when co-hosting the queue worker in the API process        |
-| `TRUST_CF_CONNECTING_IP` | `true` on Render; otherwise leave `false`                              |
-| `DATABASE_URL`           | The production PostgreSQL URL, with TLS certificate validation enabled |
-| `SESSION_SECRET`         | Newly generated random value of at least 32 characters                 |
-| `TOKEN_ENCRYPTION_KEY`   | Newly generated 64-character hexadecimal key                           |
-| `GITHUB_CLIENT_ID`       | Production GitHub App client ID                                        |
-| `GITHUB_CLIENT_SECRET`   | GitHub App client secret                                               |
-| `GITHUB_AUTH_MODE`       | `github_app` after registering and testing the GitHub App              |
-| `GITHUB_APP_ID`          | Numeric GitHub App ID                                                  |
-| `GITHUB_APP_SLUG`        | GitHub App URL slug                                                    |
-| `GITHUB_APP_PRIVATE_KEY` | GitHub App private key, stored as a secret file or multiline secret    |
-| `GITHUB_CALLBACK_URL`    | `https://api.example.com/api/auth/github/callback`                     |
-| `FRONTEND_ORIGIN`        | Exact dashboard origin, with no path or query string                   |
-| `EXTENSION_ID`           | ID from the signed extension package                                   |
+| Variable                    | Production value                                                       |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `NODE_ENV`                  | `production`                                                           |
+| `PORT`                      | The port required by the hosting platform                              |
+| `RUN_SYNC_WORKER`           | `true` only when co-hosting the queue worker in the API process        |
+| `TRUST_CF_CONNECTING_IP`    | `true` on Render; otherwise leave `false`                              |
+| `DATABASE_URL`              | The production PostgreSQL URL, with TLS certificate validation enabled |
+| `SESSION_SECRET`            | Newly generated random value of at least 32 characters                 |
+| `TOKEN_ENCRYPTION_KEY`      | Newly generated 64-character hexadecimal key                           |
+| `GITHUB_CLIENT_ID`          | Production GitHub App client ID                                        |
+| `GITHUB_CLIENT_SECRET`      | GitHub App client secret                                               |
+| `GITHUB_AUTH_MODE`          | `github_app` after registering and testing the GitHub App              |
+| `GITHUB_APP_ID`             | Numeric GitHub App ID                                                  |
+| `GITHUB_APP_SLUG`           | GitHub App URL slug                                                    |
+| `GITHUB_APP_PRIVATE_KEY`    | GitHub App private key, stored as a secret file or multiline secret    |
+| `GITHUB_CALLBACK_URL`       | `https://api.example.com/api/auth/github/callback`                     |
+| `FRONTEND_ORIGIN`           | Exact dashboard origin, with no path or query string                   |
+| `EXTENSION_ID`              | ID from the signed extension package                                   |
+| `VITE_CHROME_WEB_STORE_URL` | Public Chrome Web Store listing URL, set after store approval          |
+| `VITE_EDGE_ADDONS_URL`      | Public Microsoft Edge Add-ons listing URL, set after store approval    |
 
 The Render Blueprint generates `SESSION_SECRET` automatically as a random
 256-bit value. Provide the database and GitHub App credentials only through
 Render's secret fields; never commit them to this repository.
+
+The dashboard's first-run extension setup uses the two store listing URLs
+above. Set both to the approved HTTPS listing URLs before announcing public
+availability. The frontend accepts only `chromewebstore.google.com` for the
+Chrome listing and `microsoftedge.microsoft.com` for the Edge listing; invalid
+or missing values are shown as unavailable rather than linked elsewhere.
+After a user's extension completes the account pairing handshake, the required
+first-run panel disappears for that account. The site links users to the
+official store; it never silently installs or sideloads an extension.
 
 The backend rejects insecure or localhost public URLs and common example
 placeholders in production mode. Never place secret values in frontend build

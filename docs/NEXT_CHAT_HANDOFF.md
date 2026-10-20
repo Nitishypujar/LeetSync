@@ -34,6 +34,7 @@ Never request or disclose passwords, database URLs, OAuth secrets, private keys,
 
 ## Product behavior and important security limits
 
+- The dashboard shows a required first-run extension panel until `dashboard.extension.paired` becomes true. It links only to official Chrome Web Store / Edge Add-ons URLs validated from `VITE_CHROME_WEB_STORE_URL` and `VITE_EDGE_ADDONS_URL`. Those values must be set to approved live listing URLs after store review; no ZIP/sideload route is presented to public users. Focused URL validation tests are in `frontend/tests/store-links.test.mjs`.
 - One canonical `<GitHub user>/leetcode-solutions` repository; one problem folder under `solutions/` with submitted source and one concise README; one root overview README.
 - Extension detects LeetCode identity locally, checks the account, newest Accepted result, submission identity, source, and question metadata before sending. LeetCode credentials, cookies, and session tokens must never be sent to LeetSync.
 - GitHub writes use installation tokens restricted to the selected canonical repo. Disconnect and data deletion have confirmation flows.
@@ -47,7 +48,7 @@ Never request or disclose passwords, database URLs, OAuth secrets, private keys,
 3. **Recovery.** Supabase Free has no automatic daily backups. Configure an independent encrypted off-site backup or a plan with provider backups, and rehearse restore into an isolated database. The existing DPAPI archive is not an independent recovery copy. No third-party destination or paid resource without owner's choice.
 4. **Production availability.** Render free sleeps and Supabase Free is a preview DB. Choose always-on API/worker, reliable database/backup tier, alerting, and domain before public multi-user launch. Keep one API instance until rate limiting uses shared storage. Do not incur cost without approval.
 5. **Legal.** Privacy and Terms pages now list the known operator/contact, provider/region, India jurisdiction, and account-active retention proposal; both remain drafts pending qualified review and confirmation that the policy matches actual operations.
-6. **Extension distribution.** Test the packaged extension from a clean browser profile and complete browser store account/review/publication steps. Publication requires owner action and explicit authorization. Re-check least-privilege permissions on final package.
+6. **Extension distribution.** The public dashboard's first-run store panel is implemented, but listing URLs are intentionally unset until official store approval. Submit the packaged extension for Chrome/Edge review, configure the approved public URLs as `VITE_CHROME_WEB_STORE_URL` and `VITE_EDGE_ADDONS_URL`, rebuild/redeploy, and test installation from a clean browser profile. Publication requires owner action and explicit authorization. Re-check least-privilege permissions on final package.
 7. **Secret lifecycle.** Owner reports provider secrets rotated/updated. Never display or read them back. Confirm only through functional checks; token-encryption-key migration and active secret facts should not be inferred from masked provider values.
 
 ## Key files

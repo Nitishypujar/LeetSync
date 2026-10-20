@@ -5,12 +5,21 @@ import {
   useState,
   type FormEvent,
 } from 'react';
+import { approvedStoreUrl } from './store-links.mjs';
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL ??
   (import.meta.env.DEV ? 'http://localhost:3000' : '')
 ).replace(/\/$/, '');
 const EXTENSION_ID = import.meta.env.VITE_EXTENSION_ID || '';
+const CHROME_STORE_URL = approvedStoreUrl(
+  import.meta.env.VITE_CHROME_WEB_STORE_URL,
+  'chromewebstore.google.com',
+);
+const EDGE_ADDONS_URL = approvedStoreUrl(
+  import.meta.env.VITE_EDGE_ADDONS_URL,
+  'microsoftedge.microsoft.com',
+);
 let csrfToken = '';
 
 type DashboardData = {
@@ -611,6 +620,72 @@ function App() {
             <small>Ready for retry</small>
           </article>
         </section>
+
+        {!dashboard.extension.paired && (
+          <section
+            className="panel extension-onboarding"
+            aria-labelledby="extension-onboarding-title"
+          >
+            <div className="extension-onboarding-heading">
+              <div>
+                <p className="eyebrow">REQUIRED FIRST-TIME SETUP</p>
+                <h2 id="extension-onboarding-title">
+                  Install the LeetSync extension
+                </h2>
+                <p>
+                  Choose your browser to install LeetSync from its official
+                  extension store. After you return and connect your LeetCode
+                  account, this setup step will be marked complete.
+                </p>
+              </div>
+              <span className="extension-store-badge">
+                Official store install
+              </span>
+            </div>
+
+            <div className="extension-store-actions">
+              {CHROME_STORE_URL ? (
+                <a
+                  className="button button-primary"
+                  href={CHROME_STORE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Install for Chrome <span aria-hidden="true">↗</span>
+                </a>
+              ) : (
+                <span className="extension-store-pending">
+                  Chrome listing link is added before public launch
+                </span>
+              )}
+              {EDGE_ADDONS_URL ? (
+                <a
+                  className="button button-quiet"
+                  href={EDGE_ADDONS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Install for Edge <span aria-hidden="true">↗</span>
+                </a>
+              ) : (
+                <span className="extension-store-pending">
+                  Edge listing link is added before public launch
+                </span>
+              )}
+            </div>
+
+            <div className="extension-onboarding-footer">
+              <span>
+                After installing, return here, sign in to LeetCode in this
+                browser, and enter your LeetCode username below. LeetSync never
+                asks for your LeetCode password.
+              </span>
+              <a href="https://leetcode.com/" target="_blank" rel="noreferrer">
+                Open LeetCode ↗
+              </a>
+            </div>
+          </section>
+        )}
 
         <section className="panel setup-panel">
           <div className="section-title">
