@@ -10,6 +10,8 @@ LeetSync is deployed as a working preview, but is not ready for a public multi-u
 
 ## Current continuation — 2026-10-20
 
+- **Queue-worker recovery fix (2026-10-20):** A transient database/network error could previously terminate the queue polling loop while leaving the web service online. The worker now retries with capped exponential backoff and still exits promptly on shutdown. Regression test added; full CI passes with 57 backend tests (6 skipped) and 27 frontend/extension tests. The currently deployed preview predates this local fix; because Render auto-deploy is off, it must be deployed explicitly after the change is published.
+- **Extension archive:** Built `dist/LeetSync-0.1.5.zip` locally. SHA-256: `BC753AD149A01DF439A01C07FFFD7A566DC8A68C1FA31B38C9164D451B4D41A8`. The package uses the current Render preview URL; regenerate after approved store URLs or the final production domain are available.
 - The deployed Render service is `leetsync-nitishypujar`, on `codex/release-readiness-2026-10-19`. Commit `2e56e83` is live; automatic deploy remains disabled, so future reviewed code changes need an explicit deploy.
 - The public extension onboarding panel is deployed at `c86c7cc`; the health endpoint and dashboard return HTTP 200, and the live bundle contains both browser store calls to action. Store URLs remain unset pending official listing approvals.
 - Render is on the free Starter plan in Singapore with one instance. Health path is `/health`. It co-hosts the dashboard, API, and worker; expected free-tier sleep and cold starts remain.

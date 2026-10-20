@@ -24,4 +24,19 @@ describe('sync worker loop', () => {
     );
     expect(processOneSyncJob).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps polling after a transient worker error', async () => {
+    const controller = new AbortController();
+    processOneSyncJob
+      .mockRejectedValueOnce(new Error('temporary database error'))
+      .mockImplementationOnce(async () => {
+        controller.abort();
+        return false;
+      });
+
+    await expect(runSyncWorkerLoop(controller.signal, 0)).resolves.toBe(
+      undefined,
+    );
+    expect(processOneSyncJob).toHaveBeenCalledTimes(2);
+  });
 });
