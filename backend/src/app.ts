@@ -12,10 +12,39 @@ import { registerDashboardRoutes } from './dashboard-routes.js';
 import { issueCsrfCookie } from './sessions.js';
 import { getEnv } from './config.js';
 
+export const FRONTEND_ROUTE = /^\/(?!api(?:\/|$)|health$)(?!.*\.[^/]+$).*/;
+
 export function createApp(): express.Express {
   const app = express();
   app.disable('x-powered-by');
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          baseUri: ["'self'"],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'", 'data:'],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
+          imgSrc: ["'self'", 'data:'],
+          objectSrc: ["'none'"],
+          scriptSrc: ["'self'"],
+          scriptSrcAttr: ["'none'"],
+          styleSrc: ["'self'"],
+          upgradeInsecureRequests: [],
+        },
+      },
+      frameguard: { action: 'deny' },
+    }),
+  );
+  app.use((_req, res, next) => {
+    res.setHeader(
+      'Permissions-Policy',
+      'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+    );
+    next();
+  });
 
   app.use('/api', (_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -91,7 +120,7 @@ export function createApp(): express.Express {
         etag: true,
       }),
     );
-    app.get(/^\/(?!api(?:\/|$)|health$).*/, (_req, res, next) => {
+    app.get(FRONTEND_ROUTE, (_req, res, next) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(resolve(frontendDirectory, 'index.html'), (error) => {
         if (error) next(error);

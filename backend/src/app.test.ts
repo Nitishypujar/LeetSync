@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createApp } from './app.js';
+import { createApp, FRONTEND_ROUTE } from './app.js';
 
 beforeAll(() => {
   process.env.NODE_ENV = 'test';
@@ -28,6 +28,33 @@ describe('GET /health', () => {
       version: '0.1.0',
     });
     expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['x-frame-options']).toBe('DENY');
+    expect(response.headers['permissions-policy']).toContain('camera=()');
+    expect(response.headers['content-security-policy']).toContain(
+      "frame-ancestors 'none'",
+    );
+    expect(response.headers['content-security-policy']).toContain(
+      "style-src 'self'",
+    );
+    expect(response.headers['content-security-policy']).not.toContain(
+      'unsafe-inline',
+    );
+  });
+});
+
+describe('production frontend route matching', () => {
+  it('keeps application routes while excluding files and API paths from the SPA fallback', () => {
+    expect(FRONTEND_ROUTE.test('/privacy')).toBe(true);
+    expect(FRONTEND_ROUTE.test('/terms')).toBe(true);
+    for (const path of [
+      '/api/dashboard',
+      '/health',
+      '/.env',
+      '/assets/app.js.map',
+      '/favicon.ico',
+    ]) {
+      expect(FRONTEND_ROUTE.test(path)).toBe(false);
+    }
   });
 });
 

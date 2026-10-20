@@ -10,7 +10,7 @@
 ## Browser and provider checks
 
 - Unit and API tests cover GitHub OAuth state handling, repository provisioning, commit construction, and extension payload validation.
-- Classic GitHub OAuth, public repository provisioning, and a representative worker-to-GitHub commit were verified against the connected account. The commit used a clearly labeled synthetic fixture. The new GitHub App installation flow has unit coverage but still needs a registered-App end-to-end check. A real LeetCode Accepted capture with the current extension version also needs a fresh check.
+- Classic GitHub OAuth, public repository provisioning, and a representative worker-to-GitHub commit were verified against the connected account. The commit used a clearly labeled synthetic fixture. The GitHub App is registered and installed with access limited to `leetcode-solutions`; a fresh Accepted submission through the current hosted extension-to-App-to-GitHub flow still needs end-to-end confirmation.
 - Historical submission backfill and pagination are not implemented.
 
 ## Database and deployment
