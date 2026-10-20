@@ -12,6 +12,7 @@ import {
 import {
   buildGithubAppInstallationUrl,
   createGithubInstallationAccessToken,
+  getGithubUserInstallation,
   uninstallGithubAppInstallation,
 } from './github-app.js';
 import { requireAuth, requireCsrf } from './sessions.js';
@@ -117,6 +118,88 @@ export function registerGithubRoutes(app: Express): void {
     },
   );
 
+  app.post(
+    '/api/github/installation/verify',
+    requireAuth,
+    requireCsrf,
+    rateLimit(5, 60_000),
+    async (_req, res, next) => {
+      try {
+        if (getEnv().GITHUB_AUTH_MODE !== 'github_app') {
+          res.status(404).json({ error: 'GITHUB_APP_NOT_CONFIGURED' });
+          return;
+        }
+        const user = res.locals.user as { id: string; githubLogin: string };
+        const repository = await prisma.repository.findUnique({
+          where: { userId: user.id },
+        });
+        if (!repository) {
+          res
+            .status(200)
+            .json({ installed: false, reason: 'repository_missing' });
+          return;
+        }
+        const installation = await getGithubUserInstallation(user.githubLogin);
+        if (
+          !installation ||
+          installation.account.type !== 'User' ||
+          installation.account.login.toLowerCase() !==
+            user.githubLogin.toLowerCase() ||
+          installation.repository_selection !== 'selected'
+        ) {
+          res.status(200).json({ installed: false });
+          return;
+        }
+        const installationId = BigInt(installation.id);
+        const inspectionToken = await createGithubInstallationAccessToken(
+          installationId,
+          undefined,
+          'read',
+        );
+        const installedRepositories =
+          await listGithubInstallationRepositories(inspectionToken);
+        if (
+          installedRepositories.length !== 1 ||
+          installedRepositories[0]?.id !== Number(repository.githubRepoId)
+        ) {
+          res
+            .status(200)
+            .json({ installed: false, reason: 'repository_selection' });
+          return;
+        }
+        const installationToken = await createGithubInstallationAccessToken(
+          installationId,
+          repository.githubRepoId,
+        );
+        const remoteRepository = await getGithubRepository(
+          installationToken,
+          repository.owner,
+          repository.name,
+        );
+        if (
+          remoteRepository.private ||
+          remoteRepository.archived ||
+          remoteRepository.permissions?.push !== true
+        ) {
+          res
+            .status(200)
+            .json({ installed: false, reason: 'repository_unavailable' });
+          return;
+        }
+        await prisma.repository.update({
+          where: { userId: user.id },
+          data: {
+            installationId,
+            branch: remoteRepository.default_branch,
+          },
+        });
+        res.status(200).json({ installed: true });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
   app.get(
     '/api/github/installation/callback',
     requireAuth,
@@ -152,11 +235,10 @@ export function registerGithubRoutes(app: Express): void {
 
         const user = res.locals.user as { id: string; githubLogin: string };
         const userId = user.id;
-        const [repository, accessToken] = await Promise.all([
-          prisma.repository.findUnique({ where: { userId } }),
-          getValidGithubAccessToken(userId),
-        ]);
-        if (!repository || !accessToken) {
+        const repository = await prisma.repository.findUnique({
+          where: { userId },
+        });
+        if (!repository) {
           res.redirect(
             302,
             installationCallbackUrl('error', 'github_reauth_required'),
@@ -165,10 +247,16 @@ export function registerGithubRoutes(app: Express): void {
         }
 
         const installationId = BigInt(installationIdText);
-        const installedRepositories = await listGithubInstallationRepositories(
-          accessToken,
+        // A classic OAuth token cannot call GitHub's app-installation
+        // repository-list endpoint. Inspect with a read-only installation
+        // token, then mint a separate token restricted to the one target repo.
+        const inspectionToken = await createGithubInstallationAccessToken(
           installationId,
+          undefined,
+          'read',
         );
+        const installedRepositories =
+          await listGithubInstallationRepositories(inspectionToken);
         if (
           installedRepositories.length !== 1 ||
           installedRepositories[0]?.id !== Number(repository.githubRepoId)

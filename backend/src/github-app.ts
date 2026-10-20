@@ -10,6 +10,11 @@ const installationTokenSchema = z.object({
   token: z.string().min(1),
   expires_at: z.string().datetime({ offset: true }),
 });
+const userInstallationSchema = z.object({
+  id: z.number().int().positive(),
+  account: z.object({ login: z.string().min(1), type: z.string().min(1) }),
+  repository_selection: z.enum(['all', 'selected']),
+});
 
 export function buildGithubAppInstallationUrl(state: string): string {
   const slug = getEnv().GITHUB_APP_SLUG;
@@ -19,6 +24,29 @@ export function buildGithubAppInstallationUrl(state: string): string {
   );
   url.searchParams.set('state', state);
   return url.toString();
+}
+
+export async function getGithubUserInstallation(
+  login: string,
+): Promise<z.infer<typeof userInstallationSchema> | null> {
+  const response = await fetch(
+    `${GITHUB_API}/users/${encodeURIComponent(login)}/installation`,
+    {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${createGithubAppJwt()}`,
+        'X-GitHub-Api-Version': GITHUB_API_VERSION,
+      },
+    },
+  );
+  if (response.status === 404) return null;
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `GitHub App installation lookup failed (${response.status})`,
+    );
+  }
+  return userInstallationSchema.parse(JSON.parse(text));
 }
 
 function createGithubAppJwt(): string {
@@ -43,12 +71,19 @@ function createGithubAppJwt(): string {
 
 export async function createGithubInstallationAccessToken(
   installationId: bigint,
-  repositoryId: bigint,
+  repositoryId?: bigint,
+  contentsPermission: 'read' | 'write' = 'write',
 ): Promise<string> {
-  const repositoryIdNumber = Number(repositoryId);
-  if (!Number.isSafeInteger(repositoryIdNumber) || repositoryIdNumber <= 0) {
+  const repositoryIdNumber =
+    repositoryId === undefined ? undefined : Number(repositoryId);
+  if (
+    repositoryIdNumber !== undefined &&
+    (!Number.isSafeInteger(repositoryIdNumber) || repositoryIdNumber <= 0)
+  ) {
     throw new Error('GitHub repository ID is outside the supported range');
   }
+  const repositoryIds =
+    repositoryIdNumber === undefined ? undefined : [repositoryIdNumber];
   const response = await fetch(
     `${GITHUB_API}/app/installations/${installationId}/access_tokens`,
     {
@@ -60,8 +95,8 @@ export async function createGithubInstallationAccessToken(
         'X-GitHub-Api-Version': GITHUB_API_VERSION,
       },
       body: JSON.stringify({
-        repository_ids: [repositoryIdNumber],
-        permissions: { contents: 'write' },
+        ...(repositoryIds ? { repository_ids: repositoryIds } : {}),
+        permissions: { contents: contentsPermission },
       }),
     },
   );

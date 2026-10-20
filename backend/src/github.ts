@@ -196,12 +196,11 @@ export async function listGithubRepositories(
 }
 
 export async function listGithubInstallationRepositories(
-  userAccessToken: string,
-  installationId: bigint,
+  installationToken: string,
 ): Promise<GithubRepository[]> {
   const response = await fetch(
-    `${GITHUB_API}/user/installations/${installationId}/repositories?per_page=100`,
-    { headers: githubHeaders(userAccessToken) },
+    `${GITHUB_API}/installation/repositories?per_page=100`,
+    { headers: githubHeaders(installationToken) },
   );
   const data = z
     .object({ repositories: z.array(githubRepositorySchema) })

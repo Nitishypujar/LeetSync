@@ -162,7 +162,7 @@ function App() {
   const [usernameSaved, setUsernameSaved] = useState(false);
   const [extensionAvailable, setExtensionAvailable] = useState(false);
   const errorSource = useRef<ErrorSource | null>(null);
-  const ensureAttempted = useRef(false);
+  const installationVerifyAttempted = useRef(false);
   const pairingInProgress = useRef(false);
   const pairingDone = useRef(false);
   const pairingToken = useRef<string | null>(null);
@@ -177,7 +177,7 @@ function App() {
       setDashboard(data);
       if (
         errorSource.current === 'load' ||
-        (errorSource.current === 'setup' && data.repository)
+        (errorSource.current === 'setup' && data.repository?.installed)
       ) {
         errorSource.current = null;
         setError('');
@@ -186,26 +186,23 @@ function App() {
       if (
         data.github.connected &&
         data.leetcode?.connected &&
-        (!data.repository || !data.repository.installed) &&
-        !ensureAttempted.current
+        data.repository &&
+        !data.repository.installed &&
+        !installationVerifyAttempted.current
       ) {
-        ensureAttempted.current = true;
+        installationVerifyAttempted.current = true;
         try {
-          const setup = await request<{
-            installationRequired?: boolean;
-          }>('/api/github/repository/ensure', {
-            method: 'POST',
-            body: '{}',
-          });
-          if (setup.installationRequired) {
-            const install = await request<{ url: string }>(
-              '/api/github/installation/start',
-            );
-            window.location.assign(install.url);
-            return;
+          const verification = await request<{ installed: boolean }>(
+            '/api/github/installation/verify',
+            {
+              method: 'POST',
+              body: '{}',
+            },
+          );
+          if (verification.installed) {
+            const refreshed = await request<DashboardData>('/api/dashboard');
+            setDashboard(refreshed);
           }
-          const refreshed = await request<DashboardData>('/api/dashboard');
-          setDashboard(refreshed);
         } catch (setupError) {
           errorSource.current = 'setup';
           setError(friendlyError(setupError));

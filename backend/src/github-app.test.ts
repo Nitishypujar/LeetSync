@@ -26,6 +26,7 @@ Object.assign(process.env, {
 const {
   buildGithubAppInstallationUrl,
   createGithubInstallationAccessToken,
+  getGithubUserInstallation,
   uninstallGithubAppInstallation,
 } = await import('./github-app.js');
 
@@ -39,6 +40,39 @@ describe('GitHub App access', () => {
     expect(url.hostname).toBe('github.com');
     expect(url.pathname).toBe('/apps/leetsync-test/installations/new');
     expect(url.searchParams.get('state')).toBe('state-token');
+  });
+
+  it('looks up the authenticated app installation by GitHub user login', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 12,
+          account: { login: 'Nitishypujar', type: 'User' },
+          repository_selection: 'selected',
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getGithubUserInstallation('Nitishypujar')).resolves.toEqual({
+      id: 12,
+      account: { login: 'Nitishypujar', type: 'User' },
+      repository_selection: 'selected',
+    });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.github.com/users/Nitishypujar/installation');
+    expect(String(new Headers(init.headers).get('Authorization'))).toMatch(
+      /^Bearer [A-Za-z0-9_.-]+$/,
+    );
+  });
+
+  it('reports when the GitHub App is not installed on a user account', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(null, { status: 404 })),
+    );
+    await expect(getGithubUserInstallation('Nitishypujar')).resolves.toBeNull();
   });
 
   it('mints an installation token for one repository with Contents write', async () => {
@@ -63,6 +97,27 @@ describe('GitHub App access', () => {
     expect(JSON.parse(String(init.body))).toEqual({
       repository_ids: [34],
       permissions: { contents: 'write' },
+    });
+  });
+
+  it('can mint a read-only installation token to inspect repository selection', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          token: 'ghs-read-only-installation-token',
+          expires_at: '2026-10-16T12:00:00Z',
+        }),
+        { status: 201 },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      createGithubInstallationAccessToken(12n, undefined, 'read'),
+    ).resolves.toBe('ghs-read-only-installation-token');
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({
+      permissions: { contents: 'read' },
     });
   });
 

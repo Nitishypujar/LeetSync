@@ -3,6 +3,7 @@ import {
   buildGithubAuthorizeUrl,
   createGithubCommit,
   getOrCreateDefaultGithubRepository,
+  listGithubInstallationRepositories,
 } from './github.js';
 
 const repository = {
@@ -35,6 +36,26 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('GitHub OAuth and repository setup', () => {
+  it('lists repositories using the GitHub App installation token endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ repositories: [repository] }), {
+        status: 200,
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await listGithubInstallationRepositories('ghs-installation');
+
+    expect(result).toEqual([repository]);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      'https://api.github.com/installation/repositories?per_page=100',
+    );
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer ghs-installation',
+    );
+  });
+
   it('requests access to public repositories only', () => {
     const url = new URL(buildGithubAuthorizeUrl('state'));
     expect(url.searchParams.get('scope')).toBe('public_repo');
