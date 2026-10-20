@@ -13,24 +13,25 @@ Never request or disclose passwords, database URLs, OAuth secrets, private keys,
 - Workspace: `N:\PROJECTS\LeetSync`
 - Source repository: `Nitishypujar/LeetSync`
 - Review branch: `codex/release-readiness-2026-10-19`
-- Last recorded commit: `539654c fix: prepare least-privilege extension release`
+- Last recorded commit: `970c01c feat: add official extension store onboarding`
 - Local untracked user data observed on 2026-10-20: `LeetSync-source-handoff-20261016-v2.zip`, `LeetSync-source-handoff-20261016.zip`, and `wallpaper_exports/`. Preserve these. Do not stage or delete them.
 - Check current branch/status before any work; newer changes may exist. `.env` files and local DPAPI backup are ignored and must stay out of source control and handoff archives.
 
 ## Verified deployment and integrations
 
 - Render service: `leetsync-nitishypujar`, URL `https://leetsync-nitishypujar.onrender.com`, service ID `srv-dbb5kn8473hc73cnese0`, workspace ID `tea-dai0rvks728c73dtsfh0`.
-- Render is currently a free Starter web service in Singapore, one instance, health path `/health`; dashboard/API/worker are co-hosted and auto-deploy is disabled. The last verified manual deployment was live at commit `539654c92e0910f34e051116d31ed439bc217fcc` (deployment `dep-dbbkg4oae00c7394gu40`). Check provider state rather than relying on this snapshot. A live health response alone is not a full end-to-end test.
+- Render is currently a free Starter web service in Singapore, one instance, health path `/health`; dashboard/API/worker are co-hosted and auto-deploy is disabled. The last verified manual deployment is commit `970c01c9b1be8bb476d5b2aa090d99514c0b79b8` (deployment `dep-dbbl3errjlhs73ekkep0`), with HTTP 200 from `/health` and `/`. The live dashboard bundle contains the first-run official store onboarding. Check provider state rather than relying on this snapshot. A live health response alone is not a full end-to-end test.
 - Supabase project `LeetSync-Dev` (`xalhreuurwzqjuzwfyun`) is in Singapore (`ap-southeast-1`). Password rotation was reported by the owner. Its schema was backed up locally using Windows DPAPI, migration history was reconciled, and all six Prisma migrations applied after explicit approval. The local backup is account-bound; it is not off-site disaster recovery. Never use this hosted project for tests or repeat baseline operations.
 - GitHub App `LeetSync Nitishypujar` is registered, authorized, and installed only for `Nitishypujar/leetcode-solutions`. The App has metadata read access and repository creation write permission in user authorization; installation is selected-repository only with Contents write. Do not expand access.
 - The hosted dashboard previously showed GitHub, canonical repository, extension, and LeetCode identity connected. A latest real submission had not yet been verified in the hosted service at the last handoff.
 
 ## Previous verification evidence
 
-- Latest recorded `npm run ci`: lint, shared/backend/frontend type checks, builds, and Prettier passed; 55 backend tests passed with 6 intentionally skipped, and 24 frontend/extension tests passed.
+- Latest recorded `npm run ci` (2026-10-20): lint, shared/backend/frontend type checks, builds, and Prettier passed; 55 backend tests passed with 6 intentionally skipped, and 27 frontend/extension tests passed.
 - Six DB integration tests passed against disposable local PostgreSQL databases, including a migration rehearsal. Both production Docker images built. `npm audit --audit-level=moderate` reported no vulnerabilities.
 - The CI run was before some packaging script/docs changes. Re-run the relevant checks on current code after source changes. In this Windows sandbox, Vitest may need elevated local temporary-file access; a sandbox EPERM before tests execute is an environment issue, not a test result.
 - Extension release ZIP is built with `scripts/package-extension.ps1` as `dist/LeetSync-0.1.5.zip`. It preserves the stable manifest key and strips localhost and unconfigured API hosts from the packaged permission list. Rebuild and inspect if package source changes.
+- `npm audit --audit-level=moderate` reported zero vulnerabilities on 2026-10-20.
 
 ## Product behavior and important security limits
 
