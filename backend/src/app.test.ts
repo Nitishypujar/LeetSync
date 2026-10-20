@@ -50,6 +50,8 @@ describe('production frontend route matching', () => {
       '/api/dashboard',
       '/health',
       '/.env',
+      '/.git/config',
+      '/assets/app.js/chunk',
       '/assets/app.js.map',
       '/favicon.ico',
     ]) {
