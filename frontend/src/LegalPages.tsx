@@ -82,10 +82,11 @@ function PrivacyPolicy() {
 
       <Section title="Service providers">
         <p>
-          LeetSync relies on GitHub (authentication and repository hosting) and
-          on [HOSTING PROVIDER] and [DATABASE PROVIDER] for application and
-          database hosting in [REGION]. [Add any other processors, such as error
-          monitoring, if used.]
+          LeetSync relies on GitHub for authentication and repository hosting,
+          Render for application hosting in Singapore, and Supabase for
+          PostgreSQL database hosting in [confirm the Supabase project region].
+          Add any other processors used for operations or error monitoring
+          before publication.
         </p>
       </Section>
 

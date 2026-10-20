@@ -18,12 +18,13 @@ submissions can wait until the service wakes.
 For a dependable public release, budget for an always-on worker and a database
 plan with backups and a tested restore path.
 
-For a free preview, reuse the existing Supabase project only after its password
-is rotated and the new connection string is saved in the hosting secret
-manager. Confirm the free-plan pause and backup limitations in the provider
-dashboards before putting real users on it. For a public production launch,
-use a dedicated production database with backups and a tested restore path; do
-not share the local/test database with production.
+For a free preview, the existing LeetSync-Dev Supabase project has had its
+password rotated and its Prisma schema migrations applied. It reported zero
+users and submissions during the migration. It remains a development/preview
+database, not a production database; confirm the free-plan pause and backup
+limitations in the provider dashboards before putting real users on it. For a
+public production launch, use a dedicated production database with backups and
+a tested restore path; do not share the local/test database with production.
 
 ## Required services
 
@@ -162,13 +163,16 @@ dashboard messaging configuration.
 
 ## Release sequence
 
-1. Rotate exposed provider credentials. Update GitHub, database, and hosting
-   secret settings. Do not reuse values from the supplied archive or local
-   `.env` files.
-2. Complete GitHub App setup. The local flow supports GitHub App user
-   authorization plus a repository-limited installation token. Register the
-   App after the production service URL is known. Set its user authorization
-   callback to `/api/auth/github/callback` and its post-install setup URL to
+1. The owner reports that the provider credentials were rotated and the
+   Render secret fields updated. Secret values must remain in Render and must
+   not be copied into this repository or chat. Verify privately that the
+   `TOKEN_ENCRYPTION_KEY` was rotated with the two-key migration and that a new
+   `SESSION_SECRET` is active; the deployment record does not expose secret
+   values.
+2. The GitHub App is registered and installed for the owner with only
+   `leetcode-solutions` selected. The hosted connection flow has been verified.
+   The user authorization callback is
+   `/api/auth/github/callback` and its post-install setup URL is
    `/api/github/installation/callback`. For user authorization, request
    `Repository creation: write` (to create the one canonical public repository)
    and `Metadata: read-only`. Do not grant `Administration` or use the classic
@@ -177,10 +181,10 @@ dashboard messaging configuration.
    write tokens are further scoped to that repository. If an installation is
    accidentally granted broader access, LeetSync attempts to uninstall it only
    after GitHub confirms it belongs to the signed-in user's own account.
-   Exercise sign-in,
-   repository creation/reuse, callback state validation, sync, token refresh,
-   disconnect, and app removal before switching production to
-   `GITHUB_AUTH_MODE=github_app`.
+   Do not expand its repository access. Recheck callback state validation,
+   token refresh, disconnect, and app removal as part of the pre-release
+   regression pass; the current hosted dashboard verifies the connection but
+   does not replace those lifecycle checks.
 3. For a free preview, use the existing Supabase project as described above.
    The Render service intentionally starts without running migrations. Apply
    migrations as a separate, reviewed operation only after the isolated
@@ -188,26 +192,29 @@ dashboard messaging configuration.
    ready. For public production, create a dedicated production database and
    run migrations once through a one-off job before rolling out the API and
    worker. Never repoint the local test suite at either live database.
-   **Existing Supabase migration history requires special handling:** its
-   tables are present and `supabase_migrations.schema_migrations` records only
-   `20261005180000` and `20261005220000`; `_prisma_migrations` is absent. Do
-   not run `prisma migrate deploy` directly against it, because Prisma would
-   attempt to replay the initial table-creation migrations. First obtain a
-   recoverable backup and verify the live schema. Then, as a separately
-   approved one-time metadata operation, baseline exactly those two existing
-   Prisma migration IDs with `prisma migrate resolve --applied`. Apply the
-   remaining four migrations only after the baseline is verified against a
-   disposable clone and the schema/data recovery plan is ready. No hosted
-   migration has been run.
-4. Build and deploy the API, worker, and dashboard with the production
-   configuration. Verify the dashboard origin in API CORS and the callback URL
-   in GitHub exactly match the deployed origins.
+   **Existing Supabase migration history:** on 2026-10-19 the live schema was
+   backed up, compared against the two historical SQL migrations, and both
+   were confirmed to match. After approval, those two Prisma migration IDs
+   were baselined and the remaining four migrations were applied. Prisma now
+   reports all six migrations applied. Do not repeat the baseline. Future
+   schema changes still require a fresh backup, isolated migration rehearsal,
+   and review before `prisma migrate deploy`; never run migrations at service
+   startup. The local DPAPI-protected backup is tied to the same Windows user
+   profile and is not an off-site backup.
+4. The free Render preview is deployed at
+   `https://leetsync-nitishypujar.onrender.com` with the dashboard, API, and
+   worker co-hosted. Automatic deploys are disabled. For a public production
+   deployment, choose dependable compute, database, and domain resources, then
+   verify the dashboard origin and GitHub callback against those exact origins.
 5. Confirm HTTPS redirect, HSTS, secure cookies, CSP, health checks, alerting,
    and a successful database restore test. The free preview has limited backup
    guarantees, so it does not satisfy the public-production backup gate.
-6. Install the rebuilt extension in a test browser profile. Verify account
+6. Install the release extension in a clean browser profile. Verify account
    pairing, a real Accepted submission, duplicate capture, mismatch handling,
-   queue retry, the final GitHub commit, and both disconnect actions.
+   queue retry, the final GitHub commit, and both disconnect actions. The live
+   preview still needs one owner-submitted Accepted solution to confirm the
+   full extension-to-GitHub path; do not create a synthetic submission or
+   unsolicited repository commit.
 7. Complete and review the Privacy Policy and Terms with the actual operator,
    contact, service providers, data-retention rules, and governing jurisdiction
    before enabling public signups.
