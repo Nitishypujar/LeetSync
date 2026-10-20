@@ -22,7 +22,7 @@
 
 ## Dependency audit
 
-- On 2026-10-19, `npm audit --audit-level=moderate` completed with zero reported vulnerabilities. CI repeats this check. A root npm override pins Prisma CLI's `deepmerge-ts` dependency to the patched 8.x line; Prisma client generation, production builds, and migrations must be checked again whenever Prisma or the lockfile is updated. A clean audit describes known advisories at that date and is not a guarantee against future or undisclosed issues.
+- On 2026-10-20, `npm audit --audit-level=moderate` completed with zero reported vulnerabilities. CI repeats this check. A root npm override pins Prisma CLI's `deepmerge-ts` dependency to the patched 8.x line; Prisma client generation, production builds, and migrations must be checked again whenever Prisma or the lockfile is updated. A clean audit describes known advisories at that date and is not a guarantee against future or undisclosed issues.
 
 ## Credential handling
 
