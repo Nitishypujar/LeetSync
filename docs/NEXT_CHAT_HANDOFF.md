@@ -1,132 +1,64 @@
 # LeetSync continuation handoff
 
-Updated: 2026-10-19
+Updated: 2026-10-20
 
-## Goal
+## Goal and working agreement
 
-Finish LeetSync as a secure, usable project and prepare/deploy the selected free
-preview where safe. Work autonomously on local code, documentation, tests,
-builds, and configuration. Do not repeatedly stop for routine choices or ask
-the user to run commands that can be run in the workspace. Ask for human action
-only for account authentication, secret entry/rotation, legal/business choices,
-and external publishing that has not been authorized. Batch any unavoidable
-questions into one clear request and keep completing independent work meanwhile.
+Finish LeetSync as a secure, usable project and prepare it for a responsible public release. Continue autonomously on local code, documentation, tests, configuration, and read-only provider checks. Do not ask the owner to perform routine terminal work or repeat project history. Do not stop after a plan or one milestone. Ask for human action only when needed for account authentication, private secret entry, legal/business decisions, paid resource choices, or an external publication/side effect that has not been authorized. Complete independent work first and report only verified completion.
 
-## Workspace state
+Never request or disclose passwords, database URLs, OAuth secrets, private keys, encryption keys, cookies, or access tokens in chat. Do not fabricate LeetCode Accepted submissions or write unsolicited commits to a user's solution repository. Automated checks do not prove a system is unbreachable.
 
-- Project: `N:\PROJECTS\LeetSync`
-- Source GitHub repository: `Nitishypujar/LeetSync`
-- Current workspace branch: `integration/assistant-updates-2026-10-13`, at
-  commit `cbcee69`. Its source is also published to the separate review branch
-  `codex/release-readiness-2026-10-19` (GitHub Actions run 39276805229).
-- Tracked source changes are committed. Two untracked handoff ZIP archives are
-  present locally and were intentionally excluded from the public branch.
-  Preserve them unless the user asks to remove them.
-- A source ZIP should include all project source/config/docs and uncommitted
-  changes, but must exclude `.git`, all `.env` files (keep `.env.example`),
-  `node_modules`, generated `dist`/coverage/build output, `.tmp`, and logs.
-- Never print, request, or include secret values, access tokens, cookies, or
-  database credentials in chat, logs, handoff files, or the ZIP.
+## Workspace and source state
 
-## Work already completed
+- Workspace: `N:\PROJECTS\LeetSync`
+- Source repository: `Nitishypujar/LeetSync`
+- Review branch: `codex/release-readiness-2026-10-19`
+- Last recorded commit: `539654c fix: prepare least-privilege extension release`
+- Local untracked user data observed on 2026-10-20: `LeetSync-source-handoff-20261016-v2.zip`, `LeetSync-source-handoff-20261016.zip`, and `wallpaper_exports/`. Preserve these. Do not stage or delete them.
+- Check current branch/status before any work; newer changes may exist. `.env` files and local DPAPI backup are ignored and must stay out of source control and handoff archives.
 
-- GitHub App mode is implemented with validated install state, canonical
-  `leetcode-solutions` repository checks, repository-scoped Contents write
-  tokens, and safe disconnect behavior.
-- Pairing hardening, production config checks, same-origin dashboard/API mode,
-  Render preview blueprint, resumable encryption-key rotation tool, and
-  disconnect confirmations have been implemented.
-- The repository layout was cleaned to one overview README and one README plus
-  source file per problem; the two incorrect `Pow(x, n)` commits were removed.
-- GitHub OAuth secret and Supabase DB password were rotated by the user. A
-  read-only database connection check succeeded. The `.env` value itself is
-  intentionally omitted from this handoff.
-- Latest full `npm run ci` completed successfully on 2026-10-19: 50 backend tests, 24
-  frontend/extension tests, lint, type checks, builds, and formatting passed.
-  All six database integration tests passed against a clean disposable local
-  PostgreSQL 16 container and again against a disposable database initialized
-  from the two historical Supabase SQL migrations, baselined in Prisma, and
-  advanced through all six Prisma migrations. Both production
-  Docker images built; the GitHub Actions frontend-image step now supplies the
-  required same-origin preview API URL. Never run fixtures or migrations against
-  hosted Supabase as a substitute for the disposable test DB.
-- The source review branch was pushed after excluding the handoff ZIP archives
-  and ignored `.env` files. No merge or deployment was performed. GitHub Actions
-  run 39276805229 passed for `cbcee69`, including disposable PostgreSQL tests
-  and production container builds. Review it before proposing deployment.
-- `npm audit --audit-level=moderate` completed on 2026-10-19 with zero reported vulnerabilities.
-- Local Docker Compose was brought up successfully on 2026-10-19 using the
-  root `.env` and local Compose PostgreSQL. The API `/health` returned HTTP 200
-  and the frontend served the dashboard HTML. The stack is left running for
-  local review at `http://localhost:5173/`; it is not a public deployment.
-- Hardened anonymous rate limiting for Render: the Blueprint explicitly opts
-  into validated `CF-Connecting-IP`, never trusts `X-Forwarded-For`, and the
-  per-process bucket map is bounded. Four regression tests cover trusted,
-  malformed, and bounded-client cases; the limiter still requires one API
-  instance until it uses shared storage.
-- The deployment runbook was clarified: existing Supabase can be used for a
-  free preview; public production needs a dedicated database, backups, and a
-  tested restore path. Read-only inspection of the existing Supabase project
-  found existing tables, Supabase CLI history for the first two migrations,
-  and no `_prisma_migrations` table. The isolated rehearsal confirms a safe
-  baseline procedure; no hosted migration was run. Do not run Prisma deploy
-  directly against the existing project. Obtain a recoverable backup, compare
-  schema/data, baseline only the first two existing migrations, then separately
-  approve and apply the remaining four.
-- Fixed an extension deployment bug: same-origin pairing sends the real
-  dashboard/API origin, and the extension validates dashboard messages and
-  API hosts against manifest allowlists. The expected Render preview host is
-  included and covered by a regression test.
+## Verified deployment and integrations
 
-## Important files
+- Render service: `leetsync-nitishypujar`, URL `https://leetsync-nitishypujar.onrender.com`, service ID `srv-dbb5kn8473hc73cnese0`, workspace ID `tea-dai0rvks728c73dtsfh0`.
+- Render is currently a free Starter web service in Singapore, one instance, health path `/health`; dashboard/API/worker are co-hosted and auto-deploy is disabled. The last verified manual deployment was live at commit `539654c92e0910f34e051116d31ed439bc217fcc` (deployment `dep-dbbkg4oae00c7394gu40`). Check provider state rather than relying on this snapshot. A live health response alone is not a full end-to-end test.
+- Supabase project `LeetSync-Dev` (`xalhreuurwzqjuzwfyun`) is in Singapore (`ap-southeast-1`). Password rotation was reported by the owner. Its schema was backed up locally using Windows DPAPI, migration history was reconciled, and all six Prisma migrations applied after explicit approval. The local backup is account-bound; it is not off-site disaster recovery. Never use this hosted project for tests or repeat baseline operations.
+- GitHub App `LeetSync Nitishypujar` is registered, authorized, and installed only for `Nitishypujar/leetcode-solutions`. The App has metadata read access and repository creation write permission in user authorization; installation is selected-repository only with Contents write. Do not expand access.
+- The hosted dashboard previously showed GitHub, canonical repository, extension, and LeetCode identity connected. A latest real submission had not yet been verified in the hosted service at the last handoff.
 
-- `docs/RELEASE_STATUS.md` — current release gates and known limitations.
-- `docs/PRODUCTION_DEPLOYMENT.md` — Render/Supabase preview and production
-  procedures, GitHub App settings, and safe key rotation instructions.
-- `render.yaml` — free Render preview blueprint; auto-deploy is off.
-- `backend/src/rotate-encryption-key.ts` — resumable token encryption key
-  migration. Understand and verify its safety before use.
-- `.env.example` and `backend/.env.example` — templates only; never include
-  ignored `.env` files in an archive.
+## Previous verification evidence
 
-## Remaining work / gates
+- Latest recorded `npm run ci`: lint, shared/backend/frontend type checks, builds, and Prettier passed; 55 backend tests passed with 6 intentionally skipped, and 24 frontend/extension tests passed.
+- Six DB integration tests passed against disposable local PostgreSQL databases, including a migration rehearsal. Both production Docker images built. `npm audit --audit-level=moderate` reported no vulnerabilities.
+- The CI run was before some packaging script/docs changes. Re-run the relevant checks on current code after source changes. In this Windows sandbox, Vitest may need elevated local temporary-file access; a sandbox EPERM before tests execute is an environment issue, not a test result.
+- Extension release ZIP is built with `scripts/package-extension.ps1` as `dist/LeetSync-0.1.5.zip`. It preserves the stable manifest key and strips localhost and unconfigured API hosts from the packaged permission list. Rebuild and inspect if package source changes.
 
-1. Continue security review and fix concrete issues found; do not claim any
-   system is “unbreachable.” The local CI suite, dependency audit, Docker builds,
-   and both disposable-database integration runs have passed for this handoff.
-2. Rotate `TOKEN_ENCRYPTION_KEY` safely with the documented previous-key
-   migration and rotate `SESSION_SECRET` in the eventual hosting secret store.
-   The user must enter provider secrets privately; do not ask them to paste
-   secrets into chat. Never run the key migration against the live Supabase
-   project without explicit confirmation and a recovery plan.
-3. Register and verify the GitHub App only after the public callback URL is
-   fixed. The user previously authorized app registration and a Render preview
-   with auto-deploy disabled. Source publication was separately approved and is
-   now on `codex/release-readiness-2026-10-19`. No app registration or Render
-   resource has yet been created. Never deploy secrets in build args or source.
-4. Render may assign a different host than `render.yaml` expects; set callback
-   and frontend origins to the actual host. The Render connector is not
-   currently available in this Codex session. Do not deploy against the
-   existing hosted Supabase database until its backup and migration gates pass.
-5. Run database integration tests only against a disposable PostgreSQL
-   database. The hosted Supabase project is not a test database. Before using
-   it for preview, resolve its migration-history mismatch through the verified
-   baseline procedure, but only after a recoverable backup is available and
-   the precise hosted operation is approved.
-6. Re-test the browser extension in Edge/Chrome: account pairing, accepted
-   result capture, mismatched-account rejection, duplicate handling, retry,
-   GitHub commit, and both disconnect paths. Do not submit a solution or create
-   a GitHub commit without fresh user approval for that live test.
-7. Legal pages are drafts. Known user-provided facts are operator/display name
-   `NITISH Y PUJAR`, support email `2006nitishypujar@gmail.com`, and
-   jurisdiction `India`; these are now filled into the draft. Retention period,
-   hosting/database region and final legal review remain open.
-8. Explain preview limitations (sleeping/free DB backup constraints) and do
-   not describe a free preview as a dependable public production service.
+## Product behavior and important security limits
 
-## Working style for the continuation
+- One canonical `<GitHub user>/leetcode-solutions` repository; one problem folder under `solutions/` with submitted source and one concise README; one root overview README.
+- Extension detects LeetCode identity locally, checks the account, newest Accepted result, submission identity, source, and question metadata before sending. LeetCode credentials, cookies, and session tokens must never be sent to LeetSync.
+- GitHub writes use installation tokens restricted to the selected canonical repo. Disconnect and data deletion have confirmation flows.
+- Session/cookie, CSP/CORS, pairing, queue/retry, duplicate/idempotency, deletion, and bounded rate-limit protections have regression coverage. The current rate limiter is process-local; do not scale the API beyond one instance until shared storage is used.
+- Extension payloads are not signed by LeetCode; a compromised browser/extension token could forge a valid-shaped Accepted payload for an active link. The repository-scoped GitHub token limits write scope. Explain this limitation accurately.
 
-Inspect the supplied ZIP and workspace first. Prefer making and verifying
-changes directly over giving the user commands. Do not overwrite existing
-files. Keep progress updates concise. At the end, provide a completion status,
-test evidence, known risks, and only the genuinely necessary user actions.
+## Remaining release gates
+
+1. **Fresh source/security review.** Inspect current code and fix confirmed issues. Re-run CI, dependency audit, packaging, build, and applicable DB tests only against disposable DBs. No general claim of “unbreachable” security.
+2. **Real hosted E2E.** Owner must submit an actual LeetCode solution, see LeetCode mark it Accepted, and verify one corresponding `SYNCED` row and one expected commit. Do not synthesize a submission or write a test commit without fresh explicit owner approval.
+3. **Recovery.** Supabase Free has no automatic daily backups. Configure an independent encrypted off-site backup or a plan with provider backups, and rehearse restore into an isolated database. The existing DPAPI archive is not an independent recovery copy. No third-party destination or paid resource without owner's choice.
+4. **Production availability.** Render free sleeps and Supabase Free is a preview DB. Choose always-on API/worker, reliable database/backup tier, alerting, and domain before public multi-user launch. Keep one API instance until rate limiting uses shared storage. Do not incur cost without approval.
+5. **Legal.** Privacy and Terms pages now list the known operator/contact, provider/region, India jurisdiction, and account-active retention proposal; both remain drafts pending qualified review and confirmation that the policy matches actual operations.
+6. **Extension distribution.** Test the packaged extension from a clean browser profile and complete browser store account/review/publication steps. Publication requires owner action and explicit authorization. Re-check least-privilege permissions on final package.
+7. **Secret lifecycle.** Owner reports provider secrets rotated/updated. Never display or read them back. Confirm only through functional checks; token-encryption-key migration and active secret facts should not be inferred from masked provider values.
+
+## Key files
+
+- `docs/RELEASE_STATUS.md` — release gates and recorded evidence.
+- `docs/NEW_CHAT_PROMPT.md` — updated continuation instructions.
+- `docs/PRODUCTION_DEPLOYMENT.md` — Render/Supabase procedures and safe rotation guide.
+- `render.yaml` — free preview Blueprint; no auto-deploy assumption.
+- `backend/src/rotate-encryption-key.ts` — resumable key migration; inspect before any use.
+- `scripts/package-extension.ps1` — production extension archive builder.
+
+## Next actions for the continuing agent
+
+Start by verifying the actual worktree, reading any `AGENTS.md`/project guidance, checking the live Render deployment and health without exposing secrets, and comparing source against these notes. Work through every independent local task. Keep the handoff, release status, and deploy facts synchronized. Stop only at full verified release completion or at a specific unavoidable owner/provider gate, after all other work is done.

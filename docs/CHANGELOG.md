@@ -50,3 +50,9 @@
 - Added adversarial extension-input tests, dependency auditing in CI, and minimal generated-client setup for clean checkouts.
 - Updated setup and security documentation to match the current extension trust boundary and dependency audit results.
 - Accept capture signals while LeetCode remains on the ordinary problem page, and require an exact ID match when a submission-detail URL is open.
+
+## Continuation — 2026-10-20 (release readiness)
+
+- Updated the new-chat prompt and continuation handoff to reflect the live Render preview, registered repository-limited GitHub App, completed Supabase schema migration, current test evidence, and real remaining production gates. Removed stale instructions that described already-completed registration/deployment/migration work as pending.
+- Added the current production extension ZIP policy to the handoff: stable extension ID preserved and development hosts excluded from the packaged permission allowlist.
+- Preserved the user's untracked handoff ZIPs and `wallpaper_exports/`; they were not included in source changes.

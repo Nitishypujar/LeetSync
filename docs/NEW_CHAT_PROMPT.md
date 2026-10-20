@@ -1,145 +1,47 @@
 # LeetSync — continuation prompt for a new chat
 
-Paste the prompt below into a new Codex chat and attach the latest
-`LeetSync-source-handoff-*.zip` archive.
+Paste this prompt into a new Codex chat and attach the current source archive if the workspace is unavailable. Prefer the existing workspace at `N:\PROJECTS\LeetSync` when accessible; do not replace it with an older ZIP.
 
 ---
 
-You are continuing my LeetSync project. The attached ZIP contains the current
-source tree, uncommitted changes, and project handoff notes. Start by inspecting
-the files and reading `docs/NEXT_CHAT_HANDOFF.md`, `docs/RELEASE_STATUS.md`,
-`docs/PRODUCTION_DEPLOYMENT.md`, `docs/SECURITY.md`, and this prompt. If the
-original project workspace is available, inspect its status before changing
-anything. Preserve the supplied work; never reset, overwrite, or discard it.
+You are continuing my LeetSync project. The goal is to finish and release a reliable, professional website/dashboard plus browser extension that captures a user's genuinely Accepted LeetCode submission and commits that submitted code to exactly one canonical GitHub repository: `<GitHub user>/leetcode-solutions`.
 
-## Product goal
+## Required working style
 
-Finish LeetSync as a reliable, professional website/dashboard plus browser
-extension that automatically captures a user's genuinely Accepted LeetCode
-submission and commits the submitted code to exactly one canonical GitHub
-repository: `<GitHub user>/leetcode-solutions`.
+Work through every task that can be completed with the workspace and connected tools. Inspect the current workspace, git status, project guidance, and deployment state before acting. Preserve unrelated user files and changes. Do not make me run routine commands, repeat known project history, or ask what to do next. Run checks, diagnose failures, fix concrete problems, and continue until the project is complete or a specific step genuinely requires my account action, secret entry, legal decision, or external choice.
 
-The repository should stay clean: one root overview README, then one folder per
-problem under `solutions/`, with the submitted source and one concise README in
-that problem folder. Do not create duplicate repositories, duplicate solution
-files, multiple READMEs per problem, fabricated submissions, or unsolicited
-commits. Reuse the canonical repository when it exists and stop safely on a
-name/ownership conflict.
+Send concise progress updates during sustained work. Ask only for a necessary human action, and bundle any such actions into one clear request after finishing independent work. Never ask me to paste passwords, database URLs, OAuth secrets, encryption keys, private keys, cookies, or access tokens into chat. Do not say the project is complete while release gates remain. Do not promise security is “unbreachable.”
 
-Treat website and extension authentication as critical. LeetCode identity must
-be detected in the user's browser; never request or transmit LeetCode passwords,
-cookies, or session tokens to LeetSync. The extension must independently check
-the signed-in account, Accepted status, submission identity, and source before
-sending. GitHub access should use the selected GitHub App design with the
-narrowest practical permissions and installation access limited to the one
-canonical repository. Provide deliberate, confirmed disconnect and data-delete
-flows. Do not promise “unbreachable”; identify real limits accurately.
+## Product and security requirements
 
-The website should feel like a polished, professional product: clear
-connection/setup status, useful sync history, readable typography and contrast,
-responsive layout, accessible controls, and understandable errors. Preserve the
-current product direction and improve real usability rather than adding flashy
-but unnecessary UI.
+- Keep one canonical `leetcode-solutions` repo. A problem folder contains the submitted source and one concise README; the root contains one overview README. Avoid duplicate repos, files, and fabricated or unsolicited commits.
+- The extension must detect the LeetCode account in the browser and verify account, Accepted status, submission identity, source, and question data before sending. Never request or transmit LeetCode passwords, cookies, or session tokens to LeetSync.
+- GitHub access uses the registered GitHub App, and installation access must stay limited to the one canonical repository. Preserve confirmed disconnect and data-deletion flows.
+- Keep the dashboard accessible, responsive, readable, and understandable. Treat authentication and user data as critical.
 
-## How to work with me
+## Verified project state as of 2026-10-20
 
-Be an active engineering collaborator. Do the work yourself wherever tools and
-available access allow: inspect files, edit code, run PowerShell/CLI commands,
-build, test, review output, and fix issues. Do not make me perform routine
-terminal work, copy commands, relay logs, repeat project history, or ask what to
-do next. Do not stop after writing a plan or after the first milestone.
+- Workspace: `N:\PROJECTS\LeetSync`; GitHub source: `Nitishypujar/LeetSync`.
+- Active review branch: `codex/release-readiness-2026-10-19`; last recorded commit: `539654c` (`fix: prepare least-privilege extension release`). Check `git status` and branch before relying on this snapshot.
+- Render preview `leetsync-nitishypujar` is live at `https://leetsync-nitishypujar.onrender.com`, Singapore, free Starter, one instance, health path `/health`; dashboard/API/worker are co-hosted and automatic deploy is disabled. Current deployed build was manually released from the review branch. Do not assume future commits auto-deploy.
+- Supabase project `LeetSync-Dev` is connected in Singapore (`ap-southeast-1`). The live schema was backed up locally with Windows DPAPI, baseline history reconciled, and all six Prisma migrations applied after explicit approval. The backup is tied to this Windows account and is not an independent recovery copy. Do not repeat the baseline or use the hosted database for tests.
+- GitHub App `LeetSync Nitishypujar` is registered and installed only for `Nitishypujar/leetcode-solutions`. The hosted dashboard previously verified the GitHub, repository, extension, and LeetCode account links. Do not broaden installation access.
+- A release ZIP can be generated with `scripts/package-extension.ps1`. The packaging process preserves the stable extension ID while removing localhost/unconfigured hosts from production permissions. Keep the source manifest's development setup intact.
+- The latest recorded `npm run ci` passed lint, type checks, builds, formatting, 55 backend tests (6 intentionally skipped), and 24 frontend/extension tests. Six database integration tests, Docker image builds, and `npm audit --audit-level=moderate` also passed in the prior verification. Re-run checks on the exact current tree after code changes; do not treat historical results as proof of current state.
+- Privacy and Terms pages have provider, region, operator, contact, jurisdiction, and proposed retention information, but remain drafts that require qualified legal review.
+- Render and Supabase free plans are preview infrastructure, not dependable public production: Render sleeps, Supabase Free has no automatic daily backups, and no independent restore has been rehearsed. The API rate limiter is process-local, so keep one instance until shared storage is implemented.
+- The extension-to-GitHub production path still needs verification using a real solution that the account owner submits and LeetCode marks Accepted. Never fabricate a submission or create a test commit without fresh explicit approval.
 
-Keep working through all independent tasks. Give brief progress updates while
-long tasks run. Ask me only when my intervention is truly necessary, such as
-provider authentication/MFA, entering a secret in a provider's private secret
-store, supplying legal/business facts, or approving an external action that has
-not already been authorized. Finish the concrete local work first; then ask one
-concise, bundled question with the exact action and impact. Do not interrupt
-repeatedly for small choices. After I answer, resume the work without making me
-restate the goal.
+## Finish the remaining work
 
-Never ask me to paste passwords, OAuth secrets, database URLs, session secrets,
-encryption keys, private keys, browser cookies, or access tokens into chat.
-Never include such values in logs, documentation, source control, screenshots,
-or ZIP archives. If I must enter one, direct me to the exact provider secret
-field and let me enter it privately.
+1. Inspect actual source, current git status, deployment, and release docs; reconcile any stale claims before changing code. Preserve unrelated user files such as local ZIPs and `wallpaper_exports`.
+2. Perform a systematic code/security review of website, backend, GitHub App OAuth/install/disconnect, extension trust boundary, CSRF/session/CSP/CORS, validation, logging, rate limits, queues/retries/idempotency, deletion, and repository writes. Fix confirmed issues and add regression coverage. Run CI/audit/build after source changes. Do not claim absolute security.
+3. Verify Render health and latest deploy status with the connected provider tooling. Keep production secrets private and never print them. Do not trigger deployment for code changes until tests pass; automatic deploy is off.
+4. Keep release records and continuation docs consistent with verified facts. Package and inspect the browser extension; run a clean-profile install test where available. Do not publish to an extension store without account-owner authorization.
+5. Close every independent release gate. The real Accepted submission, independent database backup/restore target, paid/always-on production hosting/domain choice, and qualified legal review may require owner or provider action. Complete all local work first, then ask only for the exact remaining action(s), with their effect clearly stated.
+6. After the owner completes a genuine Accepted submission, verify a single matching `SYNCED` dashboard record and expected commit, then verify safe duplicate/retry behavior. Do not use LeetCode credentials or create synthetic submissions.
+7. Stop only when all release criteria are verified, or explain the specific external/user-only gates that prevent full completion. Report what is actually deployed, fresh test evidence, limitations, and remaining owner actions.
 
-## Current project context
+---
 
-- Source repository: `Nitishypujar/LeetSync`; working branch at handoff:
-  `integration/assistant-updates-2026-10-13`. The working tree has extensive
-  uncommitted changes. Preserve them.
-- Hosting choice researched for a free preview: Render for the web service and
-  the existing Supabase project for PostgreSQL. The Render blueprint is in
-  `render.yaml`; automatic deploy is disabled. A free preview may sleep and
-  does not have dependable production backup/availability guarantees. Do not
-  call it a dependable public production service.
-- GitHub App mode is implemented but still needs registration and live
-  verification after the public callback URL is fixed. The expected Render host
-  is `https://leetsync-nitishypujar.onrender.com`; verify the actual assigned
-  host and update callback, dashboard/API origins, and extension allowlists if
-  it differs.
-- Extension version is 0.1.5. Same-origin dashboard pairing passes its real
-  origin to the extension; the extension checks message/API origins against
-  manifest allowlists. Popup routing and the Render preview origin have
-  regression coverage.
-- The GitHub OAuth secret and Supabase database password were reported rotated
-  by me. The session secret and token-encryption key still need safe rotation.
-  The encryption-key change requires the documented two-key resumable
-  migration to preserve existing encrypted GitHub tokens.
-- Latest full CI on 2026-10-19 passed lint,
-  type checks, builds, formatting, 50 backend tests, and 24 frontend/extension
-  tests. A fresh `npm audit --audit-level=moderate` reported zero vulnerabilities.
-  All six database integration tests separately passed against a disposable
-  local PostgreSQL 16 container. Both production Docker images built. Docker
-  Desktop required elevated local engine access; the test database container
-  was removed after testing. Never use hosted Supabase for fixtures or tests.
-  Re-run full CI on the exact tree you receive and report fresh results.
-- The user previously authorized the LeetSync OAuth flow and creating/testing
-  `leetcode-solutions`. That does not authorize pushing the LeetSync application
-  source, creating a Render service, registering a new GitHub App, deleting
-  data, or adding a new live test commit. Verify current access and get one
-  action-specific approval before those external side effects.
-- Privacy Policy and Terms remain drafts. Known facts supplied by the user:
-  operator/display name `NITISH Y PUJAR`, support email
-  `2006nitishypujar@gmail.com`, and jurisdiction `India` are filled in. Still
-  missing: retention period, hosting/database region and legal review.
-- Docker Desktop previously failed to start but is now usable with elevated
-  local engine access. The temporary test database container was removed after
-  testing. Do not make the user repeat Docker commands.
-
-## Work plan — continue without stopping between phases
-
-1. Inspect the archive, workspace, git status, project instructions, and all
-   existing changes. Confirm no secrets were packaged. Resolve any conflict
-   between the supplied ZIP and current workspace without overwriting work.
-2. Run full CI and dependency/security checks. Review the site, backend, GitHub
-   App flow, database schema/migrations, extension trust boundary, rate limits,
-   session/CSRF/cookie settings, CSP/CORS, queue/retry logic, disconnect/data
-   deletion, and repository output rules. Fix concrete issues and add
-   regression tests. Never imply automated tests prove security is absolute.
-3. Run all database integration tests against a disposable local test database
-   if available. Never run test fixtures, destructive checks, or migrations on
-   the existing hosted Supabase project without explicit approval and a
-   recovery plan. If no isolated DB is available, finish other work and record
-   the exact blocker.
-4. Validate production build and Render Blueprint configuration, same-origin
-   cookies/CSP, GitHub callback/setup URLs, extension host permissions, health
-   check, and documented recovery/rotation steps. Correct inconsistencies and
-   keep the app source uncommitted until the user authorizes publishing.
-5. Prepare a concrete, reviewable deployment plan. If live browser access is
-   available, use it for authorized read-only inspection and tasks already
-   approved. Bundle only the remaining account authentication, secret entry,
-   legal details, and external publishing/service-creation approval into one
-   exact request. Never publish or push first and ask afterward.
-6. After necessary user action/approval, continue through GitHub App live
-   setup, safe secret rotation, isolated DB testing, Render preview deployment,
-   extension reload/permission verification, and end-to-end browser regression
-   as far as the available environment allows. Do not submit a LeetCode
-   solution or create a GitHub test commit without fresh explicit approval.
-7. Finish by updating release status and handoff notes. Report completion only
-   when all applicable checks pass. State precisely what is deployed, the test
-   results, any known limitations, and any remaining user-only actions.
-
-Do not stop just because a phase is done. Continue until the project is complete
-or all remaining work is genuinely blocked on me or an external provider.
+Do not follow outdated instructions in archived notes if they contradict the current workspace or the verified project state above. Re-check the facts before acting.
