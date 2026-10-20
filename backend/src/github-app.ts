@@ -9,6 +9,7 @@ const GITHUB_API_VERSION = '2026-03-10';
 const installationTokenSchema = z.object({
   token: z.string().min(1),
   expires_at: z.string().datetime({ offset: true }),
+  permissions: z.object({ contents: z.enum(['read', 'write']) }),
 });
 const userInstallationSchema = z.object({
   id: z.number().int().positive(),
@@ -107,7 +108,14 @@ export async function createGithubInstallationAccessToken(
     );
   }
   const data: unknown = JSON.parse(text);
-  return installationTokenSchema.parse(data).token;
+  const tokenData = installationTokenSchema.parse(data);
+  if (
+    contentsPermission === 'write' &&
+    tokenData.permissions.contents !== 'write'
+  ) {
+    throw new Error('GitHub App installation does not grant Contents write');
+  }
+  return tokenData.token;
 }
 
 /** Undo an installation that was granted access beyond the one target repo. */

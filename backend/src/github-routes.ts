@@ -179,7 +179,8 @@ export function registerGithubRoutes(app: Express): void {
         if (
           remoteRepository.private ||
           remoteRepository.archived ||
-          remoteRepository.permissions?.push !== true
+          (getEnv().GITHUB_AUTH_MODE !== 'github_app' &&
+            remoteRepository.permissions?.push !== true)
         ) {
           res
             .status(200)
@@ -289,7 +290,8 @@ export function registerGithubRoutes(app: Express): void {
         if (
           remoteRepository.private ||
           remoteRepository.archived ||
-          remoteRepository.permissions?.push !== true
+          (getEnv().GITHUB_AUTH_MODE !== 'github_app' &&
+            remoteRepository.permissions?.push !== true)
         ) {
           res.redirect(
             302,

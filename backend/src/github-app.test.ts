@@ -81,6 +81,7 @@ describe('GitHub App access', () => {
         JSON.stringify({
           token: 'ghs-test-installation-token',
           expires_at: '2026-10-16T12:00:00Z',
+          permissions: { contents: 'write' },
         }),
         { status: 201 },
       ),
@@ -106,6 +107,7 @@ describe('GitHub App access', () => {
         JSON.stringify({
           token: 'ghs-read-only-installation-token',
           expires_at: '2026-10-16T12:00:00Z',
+          permissions: { contents: 'read' },
         }),
         { status: 201 },
       ),
@@ -119,6 +121,26 @@ describe('GitHub App access', () => {
     expect(JSON.parse(String(init.body))).toEqual({
       permissions: { contents: 'read' },
     });
+  });
+
+  it('refuses a write token when GitHub grants only Contents read', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            token: 'ghs-read-only-installation-token',
+            expires_at: '2026-10-16T12:00:00Z',
+            permissions: { contents: 'read' },
+          }),
+          { status: 201 },
+        ),
+      ),
+    );
+
+    await expect(createGithubInstallationAccessToken(12n, 34n)).rejects.toThrow(
+      'does not grant Contents write',
+    );
   });
 
   it('refuses unsafe repository IDs without requesting a token', async () => {
