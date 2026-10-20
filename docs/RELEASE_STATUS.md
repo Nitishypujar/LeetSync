@@ -10,7 +10,7 @@ LeetSync is deployed as a working preview, but is not ready for a public multi-u
 
 ## Current continuation — 2026-10-20
 
-- The deployed Render service is `leetsync-nitishypujar`, on `codex/release-readiness-2026-10-19`, commit `f58b72c`; latest deployment `dep-dbbjvno473hc73ckabjg` is live. Automatic deploy remains disabled, so future reviewed changes need an explicit deploy.
+- The deployed Render service is `leetsync-nitishypujar`, on `codex/release-readiness-2026-10-19`; latest deployment `dep-dbbk6du7bikc738reqeg` for commit `0ad4f77` is live. Automatic deploy remains disabled, so future reviewed code changes need an explicit deploy.
 - Render is on the free Starter plan in Singapore with one instance. Health path is `/health`. It co-hosts the dashboard, API, and worker; expected free-tier sleep and cold starts remain.
 - Hosted dashboard confirms GitHub `Nitishypujar`, the canonical `leetcode-solutions` repository, GitHub App installation, extension connection, and LeetCode username `nitishypujar_leetcode`. The installed App has access to only the selected canonical repository.
 - No accepted submission appears in the current hosted dashboard. Do not fabricate a test submission or write a test commit. To finish the real-world release gate, the owner must submit an actual solution on LeetCode and confirm the matching commit appears in this hosted dashboard and the repository.
