@@ -21,9 +21,8 @@ function PrivacyPolicy() {
     <>
       <h1>Privacy Policy</h1>
       <p className="legal-draft">
-        DRAFT — this text describes how LeetSync works today. It must be
-        reviewed by a qualified professional and completed (bracketed items)
-        before it is published.
+        DRAFT — this text describes how LeetSync works today and must be
+        reviewed by a qualified professional before publication.
       </p>
       <p>Last updated: {LAST_UPDATED}</p>
 
@@ -84,9 +83,11 @@ function PrivacyPolicy() {
         <p>
           LeetSync relies on GitHub for authentication and repository hosting,
           Render for application hosting in Singapore, and Supabase for
-          PostgreSQL database hosting in [confirm the Supabase project region].
-          Add any other processors used for operations or error monitoring
-          before publication.
+          PostgreSQL hosting in Singapore (AWS ap-southeast-1). These providers
+          may process data under their own terms and operational practices; the
+          primary hosting region does not mean all processing is limited to that
+          region. LeetSync does not currently use a separate analytics or
+          error-monitoring provider.
         </p>
       </Section>
 
@@ -96,15 +97,21 @@ function PrivacyPolicy() {
           extension. Disconnect GitHub to revoke the GitHub authorization.
           Existing synced history and commits already in your GitHub repository
           are kept. Delete my data removes LeetSync's stored records. Removing
-          commits from GitHub is done in GitHub itself. [State how long backups
-          are retained after deletion.]
+          commits from GitHub is done in GitHub itself. Deletion removes active
+          LeetSync database records; provider operational logs may remain until
+          removed under the provider's own retention schedule.
         </p>
       </Section>
 
       <Section title="Retention">
         <p>
-          [Describe how long submissions and logs are kept while your account
-          exists.]
+          Account identity, connection details, captured Accepted submissions,
+          and sync history are retained while your LeetSync account is active.
+          You can delete them at any time using Delete my data. LeetSync does
+          not currently maintain routine off-site database backups or promise
+          recovery of deleted records. GitHub commits remain in your GitHub
+          repository unless you remove them there. Hosting-provider logs are
+          subject to each provider's retention policy.
         </p>
       </Section>
 

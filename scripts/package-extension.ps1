@@ -28,16 +28,68 @@ foreach ($relativePath in $requiredFiles) {
 
 $outputDirectory = Join-Path $repoRoot 'dist'
 $archivePath = Join-Path $outputDirectory "LeetSync-$($manifest.version).zip"
+$productionOrigin = 'https://leetsync-nitishypujar.onrender.com/*'
+$manifest.host_permissions = @(
+    $productionOrigin,
+    'https://leetcode.com/*',
+    'https://leetcode.cn/*'
+)
+$manifest.externally_connectable.matches = @($productionOrigin)
+
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 if (Test-Path -LiteralPath $archivePath) {
     Remove-Item -LiteralPath $archivePath -Force
 }
 
-$packageFiles = Get-ChildItem -LiteralPath $extensionRoot -File |
-    Where-Object { $_.Name -notlike '*.test.mjs' }
-Compress-Archive -LiteralPath $packageFiles.FullName -DestinationPath $archivePath
+$tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
+$stagingDirectory = Join-Path $tempRoot "leetsync-extension-$([guid]::NewGuid().ToString('N'))"
+New-Item -ItemType Directory -Path $stagingDirectory | Out-Null
 
-$entries = @([System.IO.Compression.ZipFile]::OpenRead($archivePath).Entries | ForEach-Object FullName)
+try {
+    Get-ChildItem -LiteralPath $extensionRoot -File |
+        Where-Object { $_.Name -ne 'manifest.json' -and $_.Name -notlike '*.test.mjs' } |
+        ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $stagingDirectory
+        }
+    $manifestJson = $manifest | ConvertTo-Json -Depth 100
+    [System.IO.File]::WriteAllText(
+        (Join-Path $stagingDirectory 'manifest.json'),
+        $manifestJson,
+        [System.Text.UTF8Encoding]::new($false)
+    )
+
+    $packageFiles = Get-ChildItem -LiteralPath $stagingDirectory -File
+    Compress-Archive -LiteralPath $packageFiles.FullName -DestinationPath $archivePath
+} finally {
+    $resolvedStagingDirectory = [System.IO.Path]::GetFullPath($stagingDirectory)
+    if (-not $resolvedStagingDirectory.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to remove a staging directory outside the system temporary folder: $resolvedStagingDirectory"
+    }
+    Remove-Item -LiteralPath $resolvedStagingDirectory -Recurse -Force
+}
+
+$archive = [System.IO.Compression.ZipFile]::OpenRead($archivePath)
+try {
+    $entries = @($archive.Entries | ForEach-Object FullName)
+    $manifestEntry = $archive.GetEntry('manifest.json')
+    if (-not $manifestEntry) {
+        throw 'Packaged manifest.json is missing.'
+    }
+    $manifestStream = $manifestEntry.Open()
+    try {
+        $reader = [System.IO.StreamReader]::new($manifestStream)
+        try {
+            $packagedManifest = $reader.ReadToEnd() | ConvertFrom-Json
+        } finally {
+            $reader.Dispose()
+        }
+    } finally {
+        $manifestStream.Dispose()
+    }
+} finally {
+    $archive.Dispose()
+}
+
 foreach ($relativePath in $requiredFiles) {
     if ($relativePath -notin $entries) {
         throw "Packaged extension is missing: $relativePath"
@@ -46,6 +98,18 @@ foreach ($relativePath in $requiredFiles) {
 if ($entries | Where-Object { $_ -match '(^|/)tests?/' -or $_ -match '\.test\.' }) {
     throw 'The release archive must not contain test files.'
 }
+if ($manifest.key -ne $packagedManifest.key) {
+    throw 'The stable manifest key was not preserved in the release archive.'
+}
+if ($packagedManifest.host_permissions -contains 'http://localhost:3000/*' -or
+    $packagedManifest.host_permissions -contains 'http://127.0.0.1:3000/*' -or
+    $packagedManifest.host_permissions -contains 'https://api.leetsync.app/*') {
+    throw 'Development or unconfigured API hosts must not be packaged.'
+}
+if ($packagedManifest.externally_connectable.matches -contains 'http://localhost:5173/*' -or
+    $packagedManifest.externally_connectable.matches -contains 'http://127.0.0.1:5173/*') {
+    throw 'Local dashboard origins must not be packaged.'
+}
 
 Write-Host "Packaged LeetSync $($manifest.version): $archivePath" -ForegroundColor Green
-Write-Host "Included $($entries.Count) files; manifest ID key preserved."
+Write-Host "Included $($entries.Count) files; stable ID preserved; development hosts excluded."

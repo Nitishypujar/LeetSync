@@ -14,9 +14,10 @@ This Manifest V3 extension detects the signed-in LeetCode account and syncs veri
 
 From the repository root, run `./scripts/package-extension.ps1` in PowerShell.
 It validates the required Manifest V3 files and creates
-`dist/LeetSync-<version>.zip` without test files. The public manifest key is
-preserved so the extension keeps its stable ID. Review and test the archive in
-a clean browser profile before uploading it to a browser extension store.
+`dist/LeetSync-<version>.zip` without test files. The package keeps the public
+manifest key and stable extension ID, and strips localhost and unconfigured API
+hosts from its permission allowlists. Review and test the archive in a clean
+browser profile before uploading it to a browser extension store.
 
 The dashboard and extension exchange a short-lived setup token through the browser's external messaging API; no code is typed or copied. The popup shows the detected account, connection status, local retry queue, and most recent delivery time.
 
