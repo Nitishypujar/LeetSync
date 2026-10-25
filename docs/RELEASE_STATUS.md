@@ -1,5 +1,31 @@
 # Release readiness
 
+## Current release-readiness pass — 2026-10-26
+
+**State: preview deployed; not ready for public launch.** PR #1 was merged to
+`codex/release-readiness-2026-10-19` as `293cd763137fb7da4831c6fa4a7ba6807867bf41`.
+Render deployment `dep-dbf5460m7kps73fq2900` is live. The build and startup
+completed successfully; `/health`, `/support`, `/privacy`, and `/terms` returned
+their expected pages. The policy pages remain marked as lawyer-review drafts.
+
+**Live-history finding:** the owner-authenticated dashboard API currently
+returns zero submissions. This conflicts with the owner-provided 2026-10-15
+dashboard capture showing five accepted, synced submissions. The database and
+historical account state have not been repaired; no submission or GitHub commit
+was fabricated. The cause and any recoverable source remain unverified. This
+must be resolved before public release.
+
+**Live-route finding:** the deployed version returned `Cannot GET` for an
+unknown page instead of loading the designed not-found screen. The route matcher
+and regression assertions are corrected in the follow-up work branch; they
+must be merged and deployed before treating the not-found route as verified.
+
+The post-deploy API request ran in the owner's existing browser session, so it
+was authenticated; it is not evidence of anonymous access. Private-route
+authentication and no-store behavior are covered by CI tests. No hosted
+Supabase query or data mutation, GitHub App permission change, or secret access
+was performed in this pass.
+
 ## Current release-readiness pass — 2026-10-25
 
 **State: not ready for public launch.** Local work is being prepared on

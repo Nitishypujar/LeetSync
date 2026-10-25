@@ -46,20 +46,22 @@ describe('GET /health', () => {
 });
 
 describe('production frontend route matching', () => {
-  it('keeps application routes while excluding files and API paths from the SPA fallback', () => {
+  it('serves application routes and the not-found page without swallowing files or APIs', () => {
     expect(FRONTEND_ROUTE.test('/privacy')).toBe(true);
     expect(FRONTEND_ROUTE.test('/terms')).toBe(true);
     expect(FRONTEND_ROUTE.test('/support')).toBe(true);
+    expect(FRONTEND_ROUTE.test('/unknown-route')).toBe(true);
+    expect(FRONTEND_ROUTE.test('/dashboard')).toBe(true);
     for (const path of [
+      '/api',
       '/api/dashboard',
       '/health',
+      '/health/',
       '/.env',
       '/.git/config',
       '/assets/app.js/chunk',
       '/assets/app.js.map',
       '/favicon.ico',
-      '/unknown-route',
-      '/dashboard',
     ]) {
       expect(FRONTEND_ROUTE.test(path)).toBe(false);
     }
