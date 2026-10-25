@@ -48,6 +48,7 @@
     "prisma@6.19.3": true
   },
   "overrides": {
-    "deepmerge-ts": "^8.0.1"
+    "deepmerge-ts": "^8.0.1",
+    "body-parser": "^2.4.0"
   }
 }
