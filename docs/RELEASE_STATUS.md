@@ -2,11 +2,14 @@
 
 ## Current release-readiness pass — 2026-10-26
 
-**State: preview deployed; not ready for public launch.** PR #1 was merged to
-`codex/release-readiness-2026-10-19` as `293cd763137fb7da4831c6fa4a7ba6807867bf41`.
-Render deployment `dep-dbf5460m7kps73fq2900` is live. The build and startup
-completed successfully; `/health`, `/support`, `/privacy`, and `/terms` returned
-their expected pages. The policy pages remain marked as lawyer-review drafts.
+**State: preview deployed; not ready for public launch.** PR #1 and the
+not-found follow-up PR #2 are merged into `codex/release-readiness-2026-10-19`.
+The current preview commit is `13c1686f843ffaf315db57430164b3715c3ee5ee`;
+Render deployment `dep-dbf584gae00c73eqst10` is live. GitHub Actions run #48
+passed validation, isolated PostgreSQL integration tests, and both container
+builds. The live `/health` endpoint returned `ok`; `/support`, `/privacy`, and
+`/terms` loaded, and an unknown extensionless URL now renders the designed
+not-found page. The policy pages remain marked as lawyer-review drafts.
 
 **Live-history finding:** the owner-authenticated dashboard API currently
 returns zero submissions. This conflicts with the owner-provided 2026-10-15
@@ -15,15 +18,17 @@ historical account state have not been repaired; no submission or GitHub commit
 was fabricated. The cause and any recoverable source remain unverified. This
 must be resolved before public release.
 
-**Live-route finding:** the deployed version returned `Cannot GET` for an
-unknown page instead of loading the designed not-found screen. The route matcher
-and regression assertions are corrected in the follow-up work branch; they
-must be merged and deployed before treating the not-found route as verified.
+**Live-route finding:** the first post-merge deploy returned `Cannot GET` for an
+unknown page. PR #2 corrected the SPA fallback to serve extensionless frontend
+routes while excluding API, health, and dotted/static paths. Its regression
+assertions passed in CI; the fix is now deployed and verified at an unknown URL.
 
-The post-deploy API request ran in the owner's existing browser session, so it
-was authenticated; it is not evidence of anonymous access. Private-route
-authentication and no-store behavior are covered by CI tests. No hosted
-Supabase query or data mutation, GitHub App permission change, or secret access
+The post-deploy dashboard API request ran in the owner's existing browser
+session, so it was authenticated; it is not evidence of anonymous access.
+Private-route authentication and no-store behavior are covered by CI tests.
+The Supabase project overview currently flags `public._prisma_migrations` for
+disabled RLS and shows no scheduled backups. No SQL query, schema change, or
+data mutation was made there. No GitHub App permission change or secret access
 was performed in this pass.
 
 ## Current release-readiness pass — 2026-10-25
