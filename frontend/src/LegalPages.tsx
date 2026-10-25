@@ -21,8 +21,8 @@ function PrivacyPolicy() {
     <>
       <h1>Privacy Policy</h1>
       <p className="legal-draft">
-        DRAFT — this text describes how LeetSync works today and must be
-        reviewed by a qualified professional before publication.
+        DRAFT – requires review by a qualified lawyer. This text describes how
+        LeetSync works today and is not approved for publication.
       </p>
       <p>Last updated: {LAST_UPDATED}</p>
 
@@ -138,8 +138,8 @@ function TermsOfService() {
     <>
       <h1>Terms of Service</h1>
       <p className="legal-draft">
-        DRAFT — this text must be reviewed by a qualified professional and
-        completed (bracketed items) before it is published.
+        DRAFT – requires review by a qualified lawyer. This text is not approved
+        for publication.
       </p>
       <p>Last updated: {LAST_UPDATED}</p>
 
@@ -214,6 +214,50 @@ export function LegalPage({ kind }: { kind: LegalKind }) {
           <a href="/">← Back to LeetSync</a>
         </nav>
         {kind === 'privacy' ? <PrivacyPolicy /> : <TermsOfService />}
+      </div>
+    </main>
+  );
+}
+
+export function SupportPage() {
+  return (
+    <main className="app-shell legal-page">
+      <div className="legal-card">
+        <nav className="legal-nav">
+          <a href="/">← Back to LeetSync</a>
+        </nav>
+        <h1>LeetSync support</h1>
+        <p>
+          For account, sync, or privacy questions, contact{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and include
+          the problem title and approximate submission time. Never email your
+          passwords, browser cookies, API keys, or GitHub tokens.
+        </p>
+        <Section title="Disconnecting and uninstalling">
+          <p>
+            Disconnect LeetCode or GitHub from the dashboard to stop that
+            connection. To remove the browser extension, use your browser’s
+            Extensions page or the extension store’s remove action. A queued
+            submission stored only in that browser may be lost when you
+            uninstall; server history and commits already in GitHub are not
+            removed. Use Delete my data on the dashboard to request removal of
+            active LeetSync account records.
+          </p>
+        </Section>
+      </div>
+    </main>
+  );
+}
+
+export function NotFoundPage() {
+  return (
+    <main className="app-shell legal-page">
+      <div className="legal-card">
+        <nav className="legal-nav">
+          <a href="/">← Back to LeetSync</a>
+        </nav>
+        <h1>Page not found</h1>
+        <p>The address may be incorrect or the page may have moved.</p>
       </div>
     </main>
   );

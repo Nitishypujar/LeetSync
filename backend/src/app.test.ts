@@ -29,6 +29,9 @@ describe('GET /health', () => {
     });
     expect(response.headers['x-content-type-options']).toBe('nosniff');
     expect(response.headers['x-frame-options']).toBe('DENY');
+    expect(response.headers['x-powered-by']).toBeUndefined();
+    expect(response.headers['strict-transport-security']).toBeTruthy();
+    expect(response.headers['referrer-policy']).toBeTruthy();
     expect(response.headers['permissions-policy']).toContain('camera=()');
     expect(response.headers['content-security-policy']).toContain(
       "frame-ancestors 'none'",
@@ -46,6 +49,7 @@ describe('production frontend route matching', () => {
   it('keeps application routes while excluding files and API paths from the SPA fallback', () => {
     expect(FRONTEND_ROUTE.test('/privacy')).toBe(true);
     expect(FRONTEND_ROUTE.test('/terms')).toBe(true);
+    expect(FRONTEND_ROUTE.test('/support')).toBe(true);
     for (const path of [
       '/api/dashboard',
       '/health',
@@ -54,6 +58,8 @@ describe('production frontend route matching', () => {
       '/assets/app.js/chunk',
       '/assets/app.js.map',
       '/favicon.ico',
+      '/unknown-route',
+      '/dashboard',
     ]) {
       expect(FRONTEND_ROUTE.test(path)).toBe(false);
     }

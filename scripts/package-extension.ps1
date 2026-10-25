@@ -27,16 +27,46 @@ foreach ($relativePath in $requiredFiles) {
 }
 
 $outputDirectory = Join-Path $repoRoot 'dist'
-$archivePath = Join-Path $outputDirectory "LeetSync-$($manifest.version).zip"
-$productionOrigin = 'https://leetsync-nitishypujar.onrender.com/*'
+$archivePath = if ($env:LEETSYNC_PACKAGE_PATH) {
+    [System.IO.Path]::GetFullPath($env:LEETSYNC_PACKAGE_PATH)
+} else {
+    Join-Path $outputDirectory "LeetSync-$($manifest.version).zip"
+}
+$apiOriginValue = if ($env:LEETSYNC_API_ORIGIN) {
+    $env:LEETSYNC_API_ORIGIN
+} else {
+    'https://leetsync-nitishypujar.onrender.com'
+}
+$dashboardOriginValue = if ($env:LEETSYNC_DASHBOARD_ORIGIN) {
+    $env:LEETSYNC_DASHBOARD_ORIGIN
+} else {
+    $apiOriginValue
+}
+
+function ConvertTo-ExtensionOriginPattern([string]$value, [string]$name) {
+    $uri = $null
+    if (-not [Uri]::TryCreate($value, [UriKind]::Absolute, [ref]$uri) -or
+        $uri.Scheme -ne 'https' -or
+        $uri.UserInfo -or
+        $uri.Query -or
+        $uri.Fragment -or
+        $uri.AbsolutePath -ne '/') {
+        throw "$name must be a bare HTTPS origin, for example https://app.example.com"
+    }
+    return "$($uri.GetLeftPart([UriPartial]::Authority))/*"
+}
+
+$apiOrigin = ConvertTo-ExtensionOriginPattern $apiOriginValue 'LEETSYNC_API_ORIGIN'
+$dashboardOrigin = ConvertTo-ExtensionOriginPattern $dashboardOriginValue 'LEETSYNC_DASHBOARD_ORIGIN'
 $manifest.host_permissions = @(
-    $productionOrigin,
+    $apiOrigin,
     'https://leetcode.com/*',
     'https://leetcode.cn/*'
 )
-$manifest.externally_connectable.matches = @($productionOrigin)
+$manifest.externally_connectable.matches = @($dashboardOrigin)
 
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path (Split-Path -Parent $archivePath) -Force | Out-Null
 if (Test-Path -LiteralPath $archivePath) {
     Remove-Item -LiteralPath $archivePath -Force
 }
@@ -110,6 +140,10 @@ if ($packagedManifest.externally_connectable.matches -contains 'http://localhost
     $packagedManifest.externally_connectable.matches -contains 'http://127.0.0.1:5173/*') {
     throw 'Local dashboard origins must not be packaged.'
 }
+if ($apiOrigin -notin $packagedManifest.host_permissions -or
+    $dashboardOrigin -notin $packagedManifest.externally_connectable.matches) {
+    throw 'The package does not contain exactly the configured API and dashboard origins.'
+}
 
 Write-Host "Packaged LeetSync $($manifest.version): $archivePath" -ForegroundColor Green
-Write-Host "Included $($entries.Count) files; stable ID preserved; development hosts excluded."
+Write-Host "Included $($entries.Count) files; stable ID preserved; configured HTTPS origins only; development hosts excluded."

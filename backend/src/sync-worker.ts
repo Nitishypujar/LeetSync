@@ -30,16 +30,26 @@ function formatCommitDate(date: Date, timeZone: string): string {
   return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}:${part('second')}.${part('fractionalSecond')}${offset}`;
 }
 
-function formatError(error: unknown): string {
-  const message =
-    error instanceof Error ? error.message : 'Unexpected sync error';
-  return message
-    .replace(
-      /(?:postgres(?:ql)?:\/\/)[^\s'"<>]+/gi,
-      '[redacted connection URL]',
-    )
-    .replace(/\b(token|password|secret)=([^&\s]+)/gi, '$1=[redacted]')
-    .slice(0, 500);
+export function formatError(error: unknown): string {
+  if (!(error instanceof Error)) return 'Sync failed due to an internal error.';
+
+  // Persist only known, non-sensitive diagnostics. Arbitrary upstream or
+  // database messages can contain credentials, request data, or source code.
+  const githubStatus = /^GitHub request failed \(([45]\d\d)\)$/.exec(
+    error.message,
+  );
+  if (githubStatus) return `GitHub request failed (${githubStatus[1]})`;
+
+  const safeMessages = new Set([
+    'Choose a GitHub repository before syncing.',
+    'Reconnect GitHub before syncing.',
+    'The selected GitHub repository is not writable.',
+    'GitHub did not return a commit for the written file',
+    'LeetCode source code exceeds the supported size',
+  ]);
+  return safeMessages.has(error.message)
+    ? error.message
+    : 'Sync failed due to an internal error.';
 }
 
 async function failStaleJobsAtRetryLimit(): Promise<void> {

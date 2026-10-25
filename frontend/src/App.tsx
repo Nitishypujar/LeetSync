@@ -938,6 +938,7 @@ function App() {
           </a>
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
+          <a href="/support">Support</a>
         </footer>
       </div>
     </main>
