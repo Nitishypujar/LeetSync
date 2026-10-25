@@ -31,6 +31,15 @@ disabled RLS and shows no scheduled backups. No SQL query, schema change, or
 data mutation was made there. No GitHub App permission change or secret access
 was performed in this pass.
 
+**Prepared RLS remediation:** a new Prisma migration enables RLS on the
+internal `_prisma_migrations` ledger, revokes `PUBLIC` access and conditionally
+revokes Supabase API-role grants. It intentionally creates no policies, so API
+roles have no ledger access; the database-owner role used by Prisma remains
+able to migrate. An isolated-database integration assertion checks that RLS is
+enabled with no policies. This code change does not alter the hosted database;
+the live Supabase warning remains until the migration is applied after a
+verified recovery backup and deployment review.
+
 ## Current release-readiness pass — 2026-10-25
 
 **State: not ready for public launch.** Local work is being prepared on
@@ -133,7 +142,7 @@ LeetSync is deployed as a working preview, but is not ready for a public multi-u
 ## Required before public release
 
 1. **Separate local and hosted databases.** `backend/.env` points at Supabase, while the root Compose configuration targets its local PostgreSQL service. Do not run `npm run db:deploy`, `npm run test:db`, or backend server commands against the Supabase configuration during local work. Use a dedicated disposable test database for integration tests.
-2. **Create a production recovery plan.** The current preview database is the existing Supabase Dev project and its schema migrations are complete. Its verified DPAPI backup is local and Windows-account-bound, not an independent recovery copy. Before real multi-user use, establish provider backups or encrypted off-site exports and rehearse a restore into an isolated database.
+2. **Create a production recovery plan and apply the pending RLS migration.** The current preview database is the existing Supabase Dev project and its schema migrations are complete. Its verified DPAPI backup is local and Windows-account-bound, not an independent recovery copy. Before real multi-user use, establish provider backups or encrypted off-site exports, rehearse a restore into an isolated database, review the new migration, and apply it to the hosted database. Confirm the advisor warning clears and the Prisma owner can still deploy migrations.
 3. **Finish live end-to-end verification.** GitHub App authorization and installation are already verified against the deployed service, and the installation is restricted to `leetcode-solutions`. The current live submission history was not queried in this pass. Verify the existing owner-submitted Accepted entry against exactly one commit and `SYNCED` record first; use a new real submission only if the earlier user-shared evidence cannot be reproduced, then check retry/disconnect behavior non-destructively.
 4. **Complete an independent security review.** Recheck the production threat model, OAuth/App permissions, extension permissions, rate limits, logging and data deletion paths before opening signups. Automated tests and a clean dependency audit do not establish that the service is unbreachable.
 5. **Choose dependable production hosting.** The current Render free preview is deployed. For public launch, select an always-on plan, reliable worker arrangement, database backups/restore, alerting, and a custom domain; keep one API instance until rate limiting uses a shared store.
