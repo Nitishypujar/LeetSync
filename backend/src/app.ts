@@ -12,7 +12,7 @@ import { registerDashboardRoutes } from './dashboard-routes.js';
 import { issueCsrfCookie } from './sessions.js';
 import { getEnv } from './config.js';
 
-export const FRONTEND_ROUTE = /^\/(?:|privacy|terms|support)\/?$/;
+export const FRONTEND_ROUTE = /^\/(?!api(?:\/|$))(?!health\/?$)(?!.*\.).*$/;
 
 export function createApp(): express.Express {
   const app = express();
