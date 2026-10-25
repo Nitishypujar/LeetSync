@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   decryptSecret,
+  decryptSecretWithKey,
   encryptSecret,
+  encryptSecretWithKey,
   equalSecrets,
   hashToken,
+  rotateEncryptedSecretWithKeys,
 } from './crypto.js';
 
 beforeEach(() => {
@@ -27,6 +30,23 @@ describe('crypto helpers', () => {
     const encrypted = encryptSecret(plaintext);
     expect(encrypted).not.toContain(plaintext);
     expect(decryptSecret(encrypted)).toBe(plaintext);
+  });
+
+  it('rotates encrypted secrets safely and can be rerun after interruption', () => {
+    const oldKey = 'a'.repeat(64);
+    const newKey = 'b'.repeat(64);
+    const plaintext = 'github-token-example';
+    const oldCiphertext = encryptSecretWithKey(plaintext, oldKey);
+    const newCiphertext = rotateEncryptedSecretWithKeys(
+      oldCiphertext,
+      newKey,
+      oldKey,
+    );
+
+    expect(decryptSecretWithKey(newCiphertext, newKey)).toBe(plaintext);
+    expect(rotateEncryptedSecretWithKeys(newCiphertext, newKey, oldKey)).toBe(
+      newCiphertext,
+    );
   });
 
   it('hashes deterministically and compares secrets safely', () => {

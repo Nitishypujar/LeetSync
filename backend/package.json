@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file=.env --import=tsx src/server.ts",
+    "start": "node dist/server.js",
     "worker": "node --env-file=.env --import=tsx src/worker.ts",
+    "rotate:encryption-key": "node --import=tsx src/rotate-encryption-key.ts",
+    "rotate:encryption-key:local": "node --env-file=.env --import=tsx src/rotate-encryption-key.ts",
+    "prebuild": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true });\"",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
@@ -13,23 +17,26 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "test:db": "vitest run src/identity.integration.test.ts"
+    "test:db": "vitest run src/identity.integration.test.ts src/sync-queue.integration.test.ts src/disconnect.integration.test.ts"
   },
   "dependencies": {
     "@leetsync/shared": "0.1.0",
+    "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.17.1",
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
-    "zod": "^3.25.76"
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.5",
+    "@types/node": "^26.6.4",
+    "@types/supertest": "^6.0.2",
     "prisma": "^6.17.1",
     "supertest": "^7.1.4",
     "tsx": "^4.20.6",
-    "vitest": "^3.2.4",
-    "@types/supertest": "^6.0.2"
+    "vitest": "4.1.12"
   }
 }

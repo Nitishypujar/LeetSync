@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LeetSync</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header>
+        <span class="brand-mark">L</span>
+        <div><strong>LeetSync</strong><small>Browser connection</small></div>
+        <span id="status-dot" class="dot"></span>
+      </header>
+      <section class="account-card">
+        <span class="label">LEETCODE ACCOUNT</span>
+        <strong id="account">Not detected</strong>
+        <p id="status">Open LeetCode to detect your signed-in account.</p>
+      </section>
+      <div class="detail-row">
+        <span>Last delivered</span><b id="last-sync">Not yet</b>
+      </div>
+      <div class="detail-row">
+        <span>Saved to send</span><b id="queue-count">0</b>
+      </div>
+      <p id="notice" role="status"></p>
+      <button id="open-dashboard" class="primary">Open dashboard</button>
+      <button id="disconnect" class="quiet" hidden>
+        Disconnect this browser
+      </button>
+      <button id="discard" class="danger" hidden>
+        Discard saved submissions
+      </button>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,9 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db.js';
 
 const shouldRunDatabaseTests = process.env.RUN_DB_TESTS === 'true';
-const prisma = new PrismaClient();
-
 const suite = shouldRunDatabaseTests ? describe : describe.skip;
 
 suite('GitHub identity uniqueness', () => {

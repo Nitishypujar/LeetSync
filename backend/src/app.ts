@@ -1,25 +1,78 @@
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { healthResponseSchema } from '@leetsync/shared';
-import { getEnv } from './config.js';
 import { registerAuthRoutes } from './auth.js';
+import { registerGithubRoutes } from './github-routes.js';
+import { registerLeetcodeRoutes } from './leetcode-routes.js';
+import { registerExtensionRoutes } from './extension-routes.js';
+import { registerDashboardRoutes } from './dashboard-routes.js';
 import { issueCsrfCookie } from './sessions.js';
+import { getEnv } from './config.js';
+
+export const FRONTEND_ROUTE = /^\/(?!api(?:\/|$))(?!health\/?$)(?!.*\.).*$/;
 
 export function createApp(): express.Express {
   const app = express();
   app.disable('x-powered-by');
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          baseUri: ["'self'"],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'", 'data:'],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
+          imgSrc: ["'self'", 'data:'],
+          objectSrc: ["'none'"],
+          scriptSrc: ["'self'"],
+          scriptSrcAttr: ["'none'"],
+          styleSrc: ["'self'"],
+          upgradeInsecureRequests: [],
+        },
+      },
+      frameguard: { action: 'deny' },
+    }),
+  );
+  app.use((_req, res, next) => {
+    res.setHeader(
+      'Permissions-Policy',
+      'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+    );
+    next();
+  });
+
+  app.use('/api', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    next();
+  });
 
   app.use((req, res, next) => {
     const origin = req.get('origin');
-    const allowedOrigin = process.env.FRONTEND_ORIGIN;
-    if (origin && allowedOrigin && origin === allowedOrigin) {
+    const env = getEnv();
+    const allowedOrigins = new Set([
+      new URL(env.FRONTEND_ORIGIN).origin,
+      ...(env.EXTENSION_ID ? [`chrome-extension://${env.EXTENSION_ID}`] : []),
+    ]);
+    if (
+      ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) &&
+      origin &&
+      !allowedOrigins.has(origin)
+    ) {
+      res.status(403).json({ error: 'ORIGIN_NOT_ALLOWED' });
+      return;
+    }
+    if (origin && allowedOrigins.has(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader(
         'Access-Control-Allow-Headers',
-        'Content-Type, X-CSRF-Token',
+        'Authorization, Content-Type, X-CSRF-Token',
       );
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
       res.setHeader('Vary', 'Origin');
@@ -31,7 +84,7 @@ export function createApp(): express.Express {
     next();
   });
 
-  app.use(express.json({ limit: '256kb' }));
+  app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
 
   app.get('/health', (_req, res) => {
@@ -50,6 +103,30 @@ export function createApp(): express.Express {
   });
 
   registerAuthRoutes(app);
+  registerGithubRoutes(app);
+  registerLeetcodeRoutes(app);
+  registerExtensionRoutes(app);
+  registerDashboardRoutes(app);
+
+  if (getEnv().NODE_ENV === 'production') {
+    const frontendDirectory = resolve(
+      fileURLToPath(new URL('.', import.meta.url)),
+      '../../frontend/dist',
+    );
+    app.use(
+      express.static(frontendDirectory, {
+        index: false,
+        maxAge: '1d',
+        etag: true,
+      }),
+    );
+    app.get(FRONTEND_ROUTE, (_req, res, next) => {
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(resolve(frontendDirectory, 'index.html'), (error) => {
+        if (error) next(error);
+      });
+    });
+  }
 
   app.use(
     (
@@ -59,10 +136,20 @@ export function createApp(): express.Express {
       next: express.NextFunction,
     ) => {
       void next;
-      const message =
-        error instanceof Error ? error.message : 'Internal server error';
-      if (getEnv().NODE_ENV !== 'production') {
-        res.status(500).json({ error: 'INTERNAL_SERVER_ERROR', message });
+      const status =
+        typeof error === 'object' && error !== null && 'status' in error
+          ? error.status
+          : undefined;
+      const type =
+        typeof error === 'object' && error !== null && 'type' in error
+          ? error.type
+          : undefined;
+      if (status === 413 || type === 'entity.too.large') {
+        res.status(413).json({ error: 'REQUEST_TOO_LARGE' });
+        return;
+      }
+      if (status === 400 || type === 'entity.parse.failed') {
+        res.status(400).json({ error: 'INVALID_REQUEST_BODY' });
         return;
       }
       res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });

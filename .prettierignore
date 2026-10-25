@@ -1,0 +1,4 @@
+# Generated code
+backend/src/generated/prisma/
+**/dist/
+**/node_modules/

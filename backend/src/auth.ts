@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { Response } from 'express';
-import { Prisma } from '@prisma/client';
+import { Prisma } from './generated/prisma/client.js';
 import { prisma } from './db.js';
 import { decryptSecret, encryptSecret, equalSecrets } from './crypto.js';
 import {
@@ -8,8 +8,11 @@ import {
   exchangeGithubCode,
   getAuthenticatedGithubUser,
   refreshGithubToken,
+  revokeGithubAuthorization,
 } from './github.js';
 import { getEnv } from './config.js';
+import { uninstallGithubAppInstallation } from './github-app.js';
+import { rateLimit } from './rate-limit.js';
 import {
   createSession,
   clearCsrfCookie,
@@ -104,10 +107,14 @@ export function registerAuthRoutes(app: import('express').Express): void {
 
       const user = await prisma.user.upsert({
         where: { githubUserId: BigInt(githubUser.id) },
-        update: { githubLogin: githubUser.login },
+        update: {
+          githubLogin: githubUser.login,
+          githubDisplayName: githubUser.name ?? null,
+        },
         create: {
           githubUserId: BigInt(githubUser.id),
           githubLogin: githubUser.login,
+          githubDisplayName: githubUser.name ?? null,
         },
       });
 
@@ -132,6 +139,8 @@ export function registerAuthRoutes(app: import('express').Express): void {
         },
       });
 
+      const priorSession = req.cookies?.[SESSION_COOKIE] as string | undefined;
+      if (priorSession) await revokeSession(priorSession);
       await createSession(user.id, res);
       issueCsrfCookie(res);
       res.redirect(302, frontendSuccessUrl());
@@ -166,7 +175,7 @@ export function registerAuthRoutes(app: import('express').Express): void {
         githubLogin: user.githubLogin,
         createdAt: user.createdAt.toISOString(),
         github: {
-          connected: Boolean(githubToken),
+          connected: githubToken?.status === 'ACTIVE',
           status: githubToken?.status ?? 'REVOKED',
           expiresAt: githubToken?.expiresAt?.toISOString() ?? null,
         },
@@ -192,6 +201,98 @@ export function registerAuthRoutes(app: import('express').Express): void {
       }
     },
   );
+
+  app.post(
+    '/api/auth/disconnect-github',
+    requireAuth,
+    requireCsrf,
+    rateLimit(5, 60_000),
+    async (_req, res, next) => {
+      try {
+        const user = res.locals.user as { id: string; githubLogin: string };
+        const token = await prisma.githubToken.findUnique({
+          where: { userId: user.id },
+        });
+        const repository =
+          getEnv().GITHUB_AUTH_MODE === 'github_app'
+            ? await prisma.repository.findUnique({
+                where: { userId: user.id },
+              })
+            : null;
+        let appInstallationRemoved: boolean | null = null;
+        if (repository?.installationId) {
+          appInstallationRemoved = await uninstallGithubAppInstallation(
+            repository.installationId,
+            user.githubLogin,
+          ).catch(() => false);
+        }
+        let providerRevoked = false;
+        if (token) {
+          try {
+            providerRevoked = await revokeGithubAuthorization(
+              decryptSecret(token.accessTokenEnc),
+            );
+          } catch {
+            providerRevoked = false;
+          }
+          await prisma.githubToken.deleteMany({ where: { userId: user.id } });
+        }
+        if (getEnv().GITHUB_AUTH_MODE === 'github_app') {
+          // Drop the local installation link even if GitHub is temporarily
+          // unavailable, so the worker cannot keep writing after disconnect.
+          await prisma.repository.deleteMany({ where: { userId: user.id } });
+        }
+        res.status(200).json({
+          disconnected: true,
+          providerRevoked,
+          appInstallationRemoved,
+        });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  app.post(
+    '/api/data/delete',
+    requireAuth,
+    requireCsrf,
+    async (_req, res, next) => {
+      try {
+        const user = res.locals.user as { id: string; githubLogin: string };
+        const token = await prisma.githubToken.findUnique({
+          where: { userId: user.id },
+        });
+        const repository =
+          getEnv().GITHUB_AUTH_MODE === 'github_app'
+            ? await prisma.repository.findUnique({
+                where: { userId: user.id },
+              })
+            : null;
+        if (repository?.installationId) {
+          await uninstallGithubAppInstallation(
+            repository.installationId,
+            user.githubLogin,
+          ).catch(() => false);
+        }
+        if (token) {
+          try {
+            await revokeGithubAuthorization(
+              decryptSecret(token.accessTokenEnc),
+            );
+          } catch {
+            // Local deletion continues even if GitHub cannot be reached.
+          }
+        }
+        await prisma.user.delete({ where: { id: user.id } });
+        clearSessionCookie(res);
+        clearCsrfCookie(res);
+        res.status(204).send();
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 }
 
 export async function getValidGithubAccessToken(
@@ -202,8 +303,9 @@ export async function getValidGithubAccessToken(
 
   try {
     if (
-      token.expiresAt &&
-      token.expiresAt.getTime() > Date.now() + REFRESH_SKEW_MS
+      token.status === 'ACTIVE' &&
+      (!token.expiresAt ||
+        token.expiresAt.getTime() > Date.now() + REFRESH_SKEW_MS)
     ) {
       return decryptSecret(token.accessTokenEnc);
     }
