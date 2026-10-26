@@ -1,6 +1,7 @@
 import { createSign } from 'node:crypto';
 import { z } from 'zod';
 import { getEnv } from './config.js';
+import { fetchWithTimeout } from './http.js';
 
 const GITHUB_API = 'https://api.github.com';
 const GITHUB_WEB = 'https://github.com';
@@ -30,7 +31,7 @@ export function buildGithubAppInstallationUrl(state: string): string {
 export async function getGithubUserInstallation(
   login: string,
 ): Promise<z.infer<typeof userInstallationSchema> | null> {
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${GITHUB_API}/users/${encodeURIComponent(login)}/installation`,
     {
       headers: {
@@ -85,7 +86,7 @@ export async function createGithubInstallationAccessToken(
   }
   const repositoryIds =
     repositoryIdNumber === undefined ? undefined : [repositoryIdNumber];
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${GITHUB_API}/app/installations/${installationId}/access_tokens`,
     {
       method: 'POST',
@@ -128,7 +129,7 @@ export async function uninstallGithubAppInstallation(
     Authorization: `Bearer ${createGithubAppJwt()}`,
     'X-GitHub-Api-Version': GITHUB_API_VERSION,
   };
-  const installationResponse = await fetch(
+  const installationResponse = await fetchWithTimeout(
     `${GITHUB_API}/app/installations/${installationId}`,
     { headers },
   );
@@ -143,7 +144,7 @@ export async function uninstallGithubAppInstallation(
   ) {
     return false;
   }
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${GITHUB_API}/app/installations/${installationId}`,
     { method: 'DELETE', headers },
   );

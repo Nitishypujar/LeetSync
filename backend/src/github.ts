@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getEnv } from './config.js';
+import { fetchWithTimeout } from './http.js';
 
 const GITHUB_API = 'https://api.github.com';
 const GITHUB_OAUTH = 'https://github.com/login/oauth';
@@ -108,7 +109,7 @@ export async function exchangeGithubCode(
     code,
     redirect_uri: env.GITHUB_CALLBACK_URL,
   });
-  const response = await fetch(`${GITHUB_OAUTH}/access_token`, {
+  const response = await fetchWithTimeout(`${GITHUB_OAUTH}/access_token`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -130,7 +131,7 @@ export async function refreshGithubToken(
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
   });
-  const response = await fetch(`${GITHUB_OAUTH}/access_token`, {
+  const response = await fetchWithTimeout(`${GITHUB_OAUTH}/access_token`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -149,7 +150,7 @@ export async function revokeGithubAuthorization(
   const authorization = Buffer.from(
     `${env.GITHUB_CLIENT_ID}:${env.GITHUB_CLIENT_SECRET}`,
   ).toString('base64');
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${GITHUB_API}/applications/${encodeURIComponent(env.GITHUB_CLIENT_ID)}/grant`,
     {
       method: 'DELETE',
@@ -169,7 +170,7 @@ export async function revokeGithubAuthorization(
 export async function getAuthenticatedGithubUser(
   accessToken: string,
 ): Promise<GithubUser> {
-  const response = await fetch(`${GITHUB_API}/user`, {
+  const response = await fetchWithTimeout(`${GITHUB_API}/user`, {
     method: 'GET',
     headers: githubHeaders(accessToken),
   });
@@ -182,7 +183,7 @@ export async function listGithubRepositories(
 ): Promise<GithubRepository[]> {
   const repositories: GithubRepository[] = [];
   for (let page = 1; page <= 10; page += 1) {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${GITHUB_API}/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner%2Ccollaborator%2Corganization_member`,
       { headers: githubHeaders(accessToken) },
     );
@@ -198,7 +199,7 @@ export async function listGithubRepositories(
 export async function listGithubInstallationRepositories(
   installationToken: string,
 ): Promise<GithubRepository[]> {
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${GITHUB_API}/installation/repositories?per_page=100`,
     { headers: githubHeaders(installationToken) },
   );
@@ -213,7 +214,7 @@ export async function getGithubRepository(
   owner: string,
   name: string,
 ): Promise<GithubRepository> {
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
     { headers: githubHeaders(accessToken) },
   );
@@ -243,7 +244,7 @@ export async function getOrCreateDefaultGithubRepository(
   const getOwnedRepository = async (
     name: string,
   ): Promise<GithubRepository | null> => {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${GITHUB_API}/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}`,
       { headers: githubHeaders(githubAppMode ? undefined : accessToken) },
     );
@@ -255,7 +256,7 @@ export async function getOrCreateDefaultGithubRepository(
   if (preferred) return requireReadyRepository(preferred);
 
   const createRepository = async (name: string): Promise<Response> =>
-    fetch(`${GITHUB_API}/user/repos`, {
+    fetchWithTimeout(`${GITHUB_API}/user/repos`, {
       method: 'POST',
       headers: {
         ...githubHeaders(accessToken),
@@ -293,7 +294,9 @@ async function getGithubFile(
 ): Promise<{ content: string; sha: string } | null> {
   const encodedPath = path.split('/').map(encodeURIComponent).join('/');
   const url = `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`;
-  const response = await fetch(url, { headers: githubHeaders(accessToken) });
+  const response = await fetchWithTimeout(url, {
+    headers: githubHeaders(accessToken),
+  });
   if (response.status === 404) return null;
   return contentResponseSchema.parse(await parseGithubResponse(response));
 }
@@ -306,7 +309,7 @@ async function getLatestCommitSha(
   branch: string,
 ): Promise<string> {
   const query = new URLSearchParams({ path, sha: branch, per_page: '1' });
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/commits?${query}`,
     { headers: githubHeaders(accessToken) },
   );
@@ -328,13 +331,15 @@ async function getBranchHead(
   const refUrl = `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/git/ref/heads/${encodedBranch}`;
   const ref = refResponseSchema.parse(
     await parseGithubResponse(
-      await fetch(refUrl, { headers: githubHeaders(accessToken) }),
+      await fetchWithTimeout(refUrl, { headers: githubHeaders(accessToken) }),
     ),
   );
   const commitUrl = `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/git/commits/${ref.object.sha}`;
   const commit = commitDetailsSchema.parse(
     await parseGithubResponse(
-      await fetch(commitUrl, { headers: githubHeaders(accessToken) }),
+      await fetchWithTimeout(commitUrl, {
+        headers: githubHeaders(accessToken),
+      }),
     ),
   );
   return { sha: commit.sha, treeSha: commit.tree.sha };
@@ -400,7 +405,7 @@ export async function createGithubCommit(input: {
     );
   }
 
-  const treeResponse = await fetch(`${repoUrl}/git/trees`, {
+  const treeResponse = await fetchWithTimeout(`${repoUrl}/git/trees`, {
     method: 'POST',
     headers: {
       ...githubHeaders(input.accessToken),
@@ -420,7 +425,7 @@ export async function createGithubCommit(input: {
     .object({ sha: z.string().min(1) })
     .parse(await parseGithubResponse(treeResponse));
 
-  const commitResponse = await fetch(`${repoUrl}/git/commits`, {
+  const commitResponse = await fetchWithTimeout(`${repoUrl}/git/commits`, {
     method: 'POST',
     headers: {
       ...githubHeaders(input.accessToken),
@@ -442,7 +447,7 @@ export async function createGithubCommit(input: {
     .split('/')
     .map(encodeURIComponent)
     .join('/');
-  const updateResponse = await fetch(
+  const updateResponse = await fetchWithTimeout(
     `${repoUrl}/git/refs/heads/${encodedBranch}`,
     {
       method: 'PATCH',

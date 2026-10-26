@@ -39,6 +39,15 @@ disposable local PostgreSQL database was configured.
 completed against the npm registry and found zero known vulnerabilities. This
 is an advisory snapshot, not a substitute for continuous dependency monitoring.
 
+**Outbound request resilience (2026-10-26):** all server-to-GitHub OAuth, REST,
+and GitHub App requests now have a 10-second timeout and preserve caller
+cancellation. This bounds time spent waiting during sign-in, disconnect/data
+deletion, repository setup, and sync jobs. Regression tests cover timeout,
+caller cancellation, and invalid deadlines. The latest local `npm run ci`
+passed lint, type checks, 74 backend tests, 37 frontend/extension tests,
+production builds, and formatting. Seven database integration tests remain
+skipped because no disposable local PostgreSQL database was configured.
+
 The ignored `backend/.env` resolves to a non-local database target. This pass
 adds a local-target guard to development API/worker startup, local encryption
 key rotation, Prisma migration, and database-test commands. The guard accepts
