@@ -2,21 +2,37 @@
 
 ## Current release-readiness pass — 2026-10-26
 
-**State: preview deployed; not ready for public launch.** PRs #1–#4 are merged
-into `codex/release-readiness-2026-10-19`.
-The current preview commit is `13c1686f843ffaf315db57430164b3715c3ee5ee`;
-Render deployment `dep-dbf584gae00c73eqst10` is live. GitHub Actions run #48
-passed validation, isolated PostgreSQL integration tests, and both container
-builds. The live `/health` endpoint returned `ok`; `/support`, `/privacy`, and
-`/terms` loaded, and an unknown extensionless URL now renders the designed
-not-found page. The policy pages remain marked as lawyer-review drafts.
+**State: release code is merged to `main`; not ready for public launch.** PR #5
+was merged as `9d1e30c`, and the local `main` branch is synchronized with
+`origin/main`. Its GitHub checks passed. The latest locally rerun `npm run ci`
+passed lint, type checks, 60 backend tests, 27 frontend/extension tests, both
+production builds, and formatting. Seven database integration tests were
+skipped locally because no disposable PostgreSQL database was configured; the
+GitHub Actions workflow configures disposable PostgreSQL, applies migrations,
+and enables those tests.
 
-**Live-history finding:** the owner-authenticated dashboard API currently
-returns zero submissions. This conflicts with the owner-provided 2026-10-15
-dashboard capture showing five accepted, synced submissions. The database and
-historical account state have not been repaired; no submission or GitHub commit
-was fabricated. The cause and any recoverable source remain unverified. This
-must be resolved before public release.
+The first PR #6 Actions run passed but reported that its workflow actions still
+targeted Node 20. PR #6 updates `actions/checkout`, `actions/setup-node`, and
+`docker/setup-buildx-action` to Node 24-compatible releases. The updated
+workflow passed its validation and container-image jobs for both push and pull
+request events. The optional Supabase Preview check was skipped because this
+branch has no linked Supabase preview branch. GitHub also reported a
+non-blocking `ubuntu-latest` migration notice.
+
+Render auto-deploy is disabled. The last verified preview is still commit
+`13c1686f843ffaf315db57430164b3715c3ee5ee` (deployment
+`dep-dbf584gae00c73eqst10`), so it does not include the merged `main` changes.
+That preview previously passed its `/health`, `/support`, `/privacy`, and
+`/terms` checks, and the unknown extensionless route was verified after PR #2.
+The policy pages remain drafts requiring lawyer review. No deployment was
+triggered in this pass.
+
+**Live-history finding:** the last recorded owner-authenticated dashboard API
+check returned zero submissions. This conflicts with the owner-provided
+2026-10-15 dashboard capture showing five accepted, synced submissions. The
+live database has not been rechecked in this pass, and no data was repaired or
+fabricated. The cause and any recoverable source remain unverified. This must
+be resolved before public release.
 
 **Live-route finding:** the first post-merge deploy returned `Cannot GET` for an
 unknown page. PR #2 corrected the SPA fallback to serve extensionless frontend
@@ -26,10 +42,10 @@ assertions passed in CI; the fix is now deployed and verified at an unknown URL.
 The post-deploy dashboard API request ran in the owner's existing browser
 session, so it was authenticated; it is not evidence of anonymous access.
 Private-route authentication and no-store behavior are covered by CI tests.
-The Supabase project overview currently flags `public._prisma_migrations` for
-disabled RLS and shows no scheduled backups. No SQL query, schema change, or
-data mutation was made there. No GitHub App permission change or secret access
-was performed in this pass.
+The last recorded Supabase project overview flagged
+`public._prisma_migrations` for disabled RLS and showed no scheduled backups.
+No hosted database query, schema change, or data mutation was made in this
+pass. No GitHub App permission change or secret access was performed.
 
 **RLS remediation merged:** PR #4 (`7ddf9b3`) adds a Prisma migration that
 enables RLS on the internal `_prisma_migrations` ledger, revokes `PUBLIC`
@@ -40,9 +56,10 @@ four required GitHub Actions checks passed against disposable PostgreSQL and
 container builds. The change does not alter the hosted database; the Supabase
 advisor warning remains until the migration is applied after a verified
 recovery backup and deployment review. Render auto-deploy is off, so the
-preview is still running its earlier commit.
+preview is still running its earlier commit. PR #5 merged the RLS change into
+`main`; the hosted migration remains unapplied.
 
-## Current release-readiness pass — 2026-10-25
+## Previous release-readiness pass — 2026-10-25
 
 **State: not ready for public launch.** Local work is being prepared on
 `codex/investigate-missing-submissions-2026-10-20`. No Render deploy, hosted
@@ -101,7 +118,7 @@ no live health request or account data query was made in this check.
 
 > **Historical approval follow-up (2026-10-16):** User approved a new review branch, Render preview setup with auto-deploy off, GitHub App registration, a conditional non-destructive migration fix, and hosted migrations only after all gates pass. At that time, the connected GitHub integration could not create the branch, Render was not connected, and Supabase inspection found existing tables but no Prisma history. The hosted schema was not modified then. The local disposable rehearsal proved that the baseline and six-migration sequence worked. Current hosted state is recorded below.
 
-LeetSync is deployed as a working preview, but is not ready for a public multi-user launch. The live Render service and GitHub App connection are verified. Remaining gates are a real hosted Accepted-submission sync, a recovery backup stored independently of this Windows account and a tested restore, qualified legal review of the now-populated Privacy/Terms draft, and extension store review/publication plus a clean-profile release test. A reproducible extension ZIP is now generated locally with a stable manifest ID and production-only host permissions. Render's free instance can sleep and is suitable for preview, not dependable production availability. The current rate limiter is process-local, so production must remain at one API instance until shared storage is added.
+LeetSync's release code is merged to `main`, while the last verified Render preview still runs the earlier commit because auto-deploy is disabled. It is not ready for a public multi-user launch. Remaining gates are the unresolved missing-submission history, a real hosted Accepted-submission sync, applying the reviewed RLS migration only after an independently stored recovery backup and restore rehearsal, qualified legal review of the Privacy/Terms drafts, extension store review/publication, clean-profile store installation tests, and production hosting, domain, monitoring, and backup decisions. A reproducible extension ZIP is generated locally with a stable manifest ID and production-only host permissions. Render's free instance can sleep and is suitable for preview, not dependable production availability. The current rate limiter is process-local, so production must remain at one API instance until shared storage is added.
 
 ## Historical continuation — 2026-10-20
 
