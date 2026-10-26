@@ -17,6 +17,13 @@
 
 # Changelog
 
+## Local database-target guard — 2026-10-26
+
+- Added a fail-closed check to local API and worker startup, local encryption-key rotation, Prisma migrations, and database-test commands. It accepts only loopback hosts or the Docker Compose `postgres` host and does not print database URLs.
+- Added regression coverage for accepted local targets, rejected remote/malformed targets, env-file handling, and database-test opt-in. Verified `npm run db:deploy` and `npm run test:db` stop before connection when the ignored local env file points at a non-local database.
+- Full local CI passed with 71 backend tests and 27 frontend/extension tests; 7 database integration tests remained skipped locally. CI uses an isolated PostgreSQL service.
+- Read-only Render inspection confirmed the existing free preview remains on commit `13c1686` with auto-deploy disabled; `/health` returned `ok` after cold start. No deployment or hosted database operation was performed.
+
 ## Review branch update — 2026-10-19
 
 - The Render Blueprint now generates the session secret itself, removing one

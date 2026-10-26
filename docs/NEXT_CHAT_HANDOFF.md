@@ -1,6 +1,6 @@
 # LeetSync continuation handoff
 
-Updated: 2026-10-20
+Updated: 2026-10-26
 
 ## Goal and working agreement
 
@@ -12,26 +12,28 @@ Never request or disclose passwords, database URLs, OAuth secrets, private keys,
 
 - Workspace: `N:\PROJECTS\LeetSync`
 - Source repository: `Nitishypujar/LeetSync`
-- Review branch: `codex/release-readiness-2026-10-19`
-- Last recorded commit: `c86c7cc fix: harden production dashboard security`
+- PR #6 merged to `main` as `911aaec`. The current local work is on
+  `codex/local-db-safety-guard-2026-10-26`; verify the actual branch and PR
+  status before relying on this snapshot.
 - Local untracked user data observed on 2026-10-20: `LeetSync-source-handoff-20261016-v2.zip`, `LeetSync-source-handoff-20261016.zip`, and `wallpaper_exports/`. Preserve these. Do not stage or delete them.
 - Check current branch/status before any work; newer changes may exist. `.env` files and local DPAPI backup are ignored and must stay out of source control and handoff archives.
 
 ## Verified deployment and integrations
 
 - Render service: `leetsync-nitishypujar`, URL `https://leetsync-nitishypujar.onrender.com`, service ID `srv-dbb5kn8473hc73cnese0`, workspace ID `tea-dai0rvks728c73dtsfh0`.
-- Render is currently a free Starter web service in Singapore, one instance, health path `/health`; dashboard/API/worker are co-hosted and auto-deploy is disabled. The last verified manual deployment is commit `c86c7cc0a1da5e552147b82472e5e02feefe66fa` (deployment `dep-dbblc9bbc2fs73bj5brg`), with HTTP 200 from `/health` and `/`. The live dashboard bundle contains the first-run official store onboarding and omits source maps. Check provider state rather than relying on this snapshot. A live health response alone is not a full end-to-end test.
+- Render service `leetsync-nitishypujar` is on the free plan in Singapore, one instance, health path `/health`; dashboard/API/worker are co-hosted and auto-deploy is disabled. Read-only status on 2026-10-26 showed the service still follows `codex/release-readiness-2026-10-19` and has live commit `13c1686f843ffaf315db57430164b3715c3ee5ee` (`dep-dbf584gae00c73eqst10`). `/health` returned `{"status":"ok","service":"leetsync-api","version":"0.1.0"}` after cold start. Newer `main` changes are not deployed. Check provider state rather than relying on this snapshot; a live health response alone is not a full end-to-end test.
 - Supabase project `LeetSync-Dev` (`xalhreuurwzqjuzwfyun`) is in Singapore (`ap-southeast-1`). Password rotation was reported by the owner. Its schema was backed up locally using Windows DPAPI, migration history was reconciled, and all six Prisma migrations applied after explicit approval. The local backup is account-bound; it is not off-site disaster recovery. Never use this hosted project for tests or repeat baseline operations.
 - GitHub App `LeetSync Nitishypujar` is registered, authorized, and installed only for `Nitishypujar/leetcode-solutions`. The App has metadata read access and repository creation write permission in user authorization; installation is selected-repository only with Contents write. Do not expand access.
 - The hosted dashboard previously showed GitHub, canonical repository, extension, and LeetCode identity connected. A latest real submission had not yet been verified in the hosted service at the last handoff.
 
 ## Previous verification evidence
 
-- Latest recorded `npm run ci` (2026-10-20): lint, shared/backend/frontend type checks, builds, and Prettier passed; 56 backend tests passed with 6 intentionally skipped, and 27 frontend/extension tests passed.
+- Latest local `npm run ci` (2026-10-26): lint, shared/backend/frontend type checks, builds, and Prettier passed; 71 backend tests passed with 7 database tests skipped, and 27 frontend/extension tests passed.
 - Six DB integration tests passed against disposable local PostgreSQL databases, including a migration rehearsal. Both production Docker images built. `npm audit --audit-level=moderate` reported no vulnerabilities.
 - The CI run was before some packaging script/docs changes. Re-run the relevant checks on current code after source changes. In this Windows sandbox, Vitest may need elevated local temporary-file access; a sandbox EPERM before tests execute is an environment issue, not a test result.
 - Extension release ZIP is built with `scripts/package-extension.ps1` as `dist/LeetSync-0.1.5.zip`. It preserves the stable manifest key and strips localhost and unconfigured API hosts from the packaged permission list. Rebuild and inspect if package source changes.
 - `npm audit --audit-level=moderate` reported zero vulnerabilities on 2026-10-20.
+- Added a fail-closed local database guard to dev API/worker, local key rotation, migrations, and database-test commands. It accepts only localhost, loopback, or the Docker Compose `postgres` host. `npm run db:deploy` and `npm run test:db` were verified to refuse the ignored non-local `backend/.env` target before opening a connection, without printing its value. The env file was not edited.
 - A bounded live review found and then verified fixes for public frontend source maps, the API-served dashboard's default CSP, and the SPA fallback returning 200 HTML for missing files. Live unauthenticated checks confirmed dashboard data requires a session, attacker-origin preflights receive no CORS grant, and attacker-origin writes are rejected. This did not include destructive, brute-force, or load testing and does not replace an independent penetration test.
 
 ## Product behavior and important security limits
