@@ -11,6 +11,11 @@ skipped locally because no disposable PostgreSQL database was configured; the
 GitHub Actions workflow configures disposable PostgreSQL, applies migrations,
 and enables those tests.
 
+The first PR #6 Actions run passed but reported that its workflow actions still
+targeted Node 20. PR #6 also updates `actions/checkout`, `actions/setup-node`,
+and `docker/setup-buildx-action` to Node 24-compatible releases; the final
+Actions run for that revision must pass before merge.
+
 Render auto-deploy is disabled. The last verified preview is still commit
 `13c1686f843ffaf315db57430164b3715c3ee5ee` (deployment
 `dep-dbf584gae00c73eqst10`), so it does not include the merged `main` changes.
