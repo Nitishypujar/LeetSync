@@ -2,14 +2,22 @@
 
 ## Current release-readiness pass — 2026-10-26
 
-**State: release code is merged to `main`; not ready for public launch.** PR #5
-was merged as `9d1e30c`, and the local `main` branch is synchronized with
-`origin/main`. Its GitHub checks passed. The latest locally rerun `npm run ci`
-passed lint, type checks, 60 backend tests, 27 frontend/extension tests, both
-production builds, and formatting. Seven database integration tests were
-skipped locally because no disposable PostgreSQL database was configured; the
-GitHub Actions workflow configures disposable PostgreSQL, applies migrations,
-and enables those tests.
+**State: release code and PR #6 are merged to `main`; not ready for public
+launch.** PR #5 was merged as `9d1e30c`, and PR #6 was merged as `911aaec`.
+The latest local `npm run ci` on the local database-safety branch passed lint,
+type checks, 71 backend tests, 27 frontend/extension tests, both production
+builds, and formatting. Seven database integration tests were skipped locally
+because no disposable PostgreSQL database was configured; GitHub Actions
+configures disposable PostgreSQL, applies migrations, and enables those tests.
+
+The ignored `backend/.env` resolves to a non-local database target. This pass
+adds a local-target guard to development API/worker startup, local encryption
+key rotation, Prisma migration, and database-test commands. The guard accepts
+only localhost, loopback, or the Docker Compose `postgres` host, reads values
+without printing them, and has regression coverage for local, remote, malformed,
+and missing targets. With the local environment, both `npm run db:deploy` and
+`npm run test:db` were verified to stop before connecting. The ignored env file
+was not changed.
 
 The first PR #6 Actions run passed but reported that its workflow actions still
 targeted Node 20. PR #6 updates `actions/checkout`, `actions/setup-node`, and
@@ -19,13 +27,16 @@ request events. The optional Supabase Preview check was skipped because this
 branch has no linked Supabase preview branch. GitHub also reported a
 non-blocking `ubuntu-latest` migration notice.
 
-Render auto-deploy is disabled. The last verified preview is still commit
-`13c1686f843ffaf315db57430164b3715c3ee5ee` (deployment
-`dep-dbf584gae00c73eqst10`), so it does not include the merged `main` changes.
-That preview previously passed its `/health`, `/support`, `/privacy`, and
-`/terms` checks, and the unknown extensionless route was verified after PR #2.
-The policy pages remain drafts requiring lawyer review. No deployment was
-triggered in this pass.
+Read-only Render status on 2026-10-26 confirms the service is still on the free
+plan in Singapore, with one instance, branch
+`codex/release-readiness-2026-10-19`, and auto-deploy disabled. Its live deploy
+is commit `13c1686f843ffaf315db57430164b3715c3ee5ee` (`dep-dbf584gae00c73eqst10`),
+which does not include the current `main` changes. The live `/health` endpoint
+returned `{"status":"ok","service":"leetsync-api","version":"0.1.0"}` after
+the free instance woke. No deployment was triggered. The preview previously
+passed `/support`, `/privacy`, and `/terms`; the unknown extensionless route
+was verified after PR #2. The policy pages remain drafts requiring lawyer
+review.
 
 **Live-history finding:** the last recorded owner-authenticated dashboard API
 check returned zero submissions. This conflicts with the owner-provided
@@ -160,7 +171,14 @@ LeetSync's release code is merged to `main`, while the last verified Render prev
 
 ## Required before public release
 
-1. **Separate local and hosted databases.** `backend/.env` points at Supabase, while the root Compose configuration targets its local PostgreSQL service. Do not run `npm run db:deploy`, `npm run test:db`, or backend server commands against the Supabase configuration during local work. Use a dedicated disposable test database for integration tests.
+1. **Keep local and hosted database targets separate.** The ignored
+   `backend/.env` resolves to a non-local database. Standard local development,
+   worker, local key-rotation, migration, and database-test scripts now refuse
+   targets outside `localhost`, `127.0.0.1`, `::1`, and Docker Compose's
+   `postgres` host. Keep using a dedicated disposable database for integration
+   tests. Do not bypass this guard to access hosted Supabase; any hosted
+   migration remains separately gated by an independently stored backup,
+   restore rehearsal, and deployment review.
 2. **Create a production recovery plan and apply the pending RLS migration.** The current preview database is the existing Supabase Dev project and its schema migrations are complete. Its verified DPAPI backup is local and Windows-account-bound, not an independent recovery copy. Before real multi-user use, establish provider backups or encrypted off-site exports, rehearse a restore into an isolated database, review the new migration, and apply it to the hosted database. Confirm the advisor warning clears and the Prisma owner can still deploy migrations.
 3. **Finish live end-to-end verification.** GitHub App authorization and installation are already verified against the deployed service, and the installation is restricted to `leetcode-solutions`. The current live submission history was not queried in this pass. Verify the existing owner-submitted Accepted entry against exactly one commit and `SYNCED` record first; use a new real submission only if the earlier user-shared evidence cannot be reproduced, then check retry/disconnect behavior non-destructively.
 4. **Complete an independent security review.** Recheck the production threat model, OAuth/App permissions, extension permissions, rate limits, logging and data deletion paths before opening signups. Automated tests and a clean dependency audit do not establish that the service is unbreachable.

@@ -4,20 +4,21 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node --env-file=.env --import=tsx src/server.ts",
+    "assert:local-db": "node --import=tsx src/assert-local-database.ts",
+    "dev": "npm run assert:local-db && node --env-file=.env --import=tsx src/server.ts",
     "start": "node dist/server.js",
-    "worker": "node --env-file=.env --import=tsx src/worker.ts",
+    "worker": "npm run assert:local-db && node --env-file=.env --import=tsx src/worker.ts",
     "rotate:encryption-key": "node --import=tsx src/rotate-encryption-key.ts",
-    "rotate:encryption-key:local": "node --env-file=.env --import=tsx src/rotate-encryption-key.ts",
+    "rotate:encryption-key:local": "npm run assert:local-db && node --env-file=.env --import=tsx src/rotate-encryption-key.ts",
     "prebuild": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true });\"",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "node --import=tsx src/assert-test-database.ts && vitest run",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
-    "test:db": "vitest run src/identity.integration.test.ts src/sync-queue.integration.test.ts src/disconnect.integration.test.ts"
+    "prisma:migrate": "npm run assert:local-db && prisma migrate dev",
+    "prisma:deploy": "npm run assert:local-db && prisma migrate deploy",
+    "test:db": "npm run assert:local-db && vitest run src/identity.integration.test.ts src/sync-queue.integration.test.ts src/disconnect.integration.test.ts"
   },
   "dependencies": {
     "@leetsync/shared": "0.1.0",
