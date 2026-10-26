@@ -21,6 +21,9 @@ while visible, and avoids overlapping data requests. Connection pairing checks
 run every five seconds. The submission summary distinguishes synced, queued,
 failed, and incomplete states, and the empty state describes missing LeetSync
 records without implying that the user has never solved an accepted problem.
+Dashboard supporting text and submission badges now meet WCAG AA contrast on
+their light surfaces, with a regression test to prevent low-contrast colors
+from returning.
 GitHub and LeetCode disconnects now use clear in-product confirmations; account
 data deletion requires typing `DELETE` and explains which GitHub files remain.
 Success notices for sign-out and data deletion remain visible after the user
@@ -28,9 +31,13 @@ returns to the landing screen. A disposable loopback preview verified the
 mobile layout at a 304-pixel viewport, failed/synced history rows, deletion
 confirmation enablement and cancel behavior, and an empty browser console. No
 real account action or hosted system was used. Local `npm run ci` passed lint,
-type checks, 71 backend tests, 34 extension/frontend tests, production builds,
+type checks, 71 backend tests, 37 extension/frontend tests, production builds,
 and formatting; seven database integration tests were skipped because no
 disposable local PostgreSQL database was configured.
+
+**Dependency audit refresh (2026-10-26):** `npm audit --audit-level=moderate`
+completed against the npm registry and found zero known vulnerabilities. This
+is an advisory snapshot, not a substitute for continuous dependency monitoring.
 
 The ignored `backend/.env` resolves to a non-local database target. This pass
 adds a local-target guard to development API/worker startup, local encryption
