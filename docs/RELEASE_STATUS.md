@@ -2,13 +2,15 @@
 
 ## Current release-readiness pass — 2026-10-26
 
-**State: release code and PR #6 are merged to `main`; not ready for public
-launch.** PR #5 was merged as `9d1e30c`, and PR #6 was merged as `911aaec`.
-The latest local `npm run ci` on the local database-safety branch passed lint,
-type checks, 71 backend tests, 27 frontend/extension tests, both production
-builds, and formatting. Seven database integration tests were skipped locally
-because no disposable PostgreSQL database was configured; GitHub Actions
-configures disposable PostgreSQL, applies migrations, and enables those tests.
+**State: PR #7 and the release-readiness changes are merged to `main` as
+`2e72a70`; not ready for public launch.** PR #5 was merged as `9d1e30c`, PR #6
+as `911aaec`, and PR #7 as `2e72a70`. The latest local `npm run ci` on the
+PR #7 head passed lint, type checks, 71 backend tests, 27 frontend/extension
+tests, both production builds, and formatting. Seven database integration
+tests were skipped locally because no disposable PostgreSQL database was
+configured; GitHub Actions passed its database-backed validation and container
+image checks. The optional Supabase Preview check was skipped because no
+preview branch is configured.
 
 The ignored `backend/.env` resolves to a non-local database target. This pass
 adds a local-target guard to development API/worker startup, local encryption

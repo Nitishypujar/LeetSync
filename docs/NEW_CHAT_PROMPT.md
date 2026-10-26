@@ -22,7 +22,7 @@ Send concise progress updates during sustained work. Ask only for a necessary hu
 ## Verified project state as of 2026-10-26
 
 - Workspace: `N:\PROJECTS\LeetSync`; GitHub source: `Nitishypujar/LeetSync`.
-- PR #6 merged into `main` as `911aaec`. The current local change is on `codex/local-db-safety-guard-2026-10-26`; inspect Git status and the actual branch/PR state before relying on this snapshot.
+- PR #6 merged into `main` as `911aaec`; PR #7 merged as `2e72a70`. The database-target guard is part of `main`. Inspect Git status and the actual branch/PR state before relying on this snapshot.
 - Render preview `leetsync-nitishypujar` is live at `https://leetsync-nitishypujar.onrender.com`, Singapore, free plan, one instance, health path `/health`; dashboard/API/worker are co-hosted. The service still follows the older `codex/release-readiness-2026-10-19` branch, auto-deploy is disabled, and its live commit is `13c1686`. A read-only check returned `/health` status `ok`. Do not assume later source changes are deployed.
 - Supabase project `LeetSync-Dev` is connected in Singapore (`ap-southeast-1`). The live schema was backed up locally with Windows DPAPI, baseline history reconciled, and all six Prisma migrations applied after explicit approval. The backup is tied to this Windows account and is not an independent recovery copy. Do not repeat the baseline or use the hosted database for tests.
 - GitHub App `LeetSync Nitishypujar` is registered and installed only for `Nitishypujar/leetcode-solutions`. The hosted dashboard previously verified the GitHub, repository, extension, and LeetCode account links. Do not broaden installation access.

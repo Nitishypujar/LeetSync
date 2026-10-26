@@ -12,8 +12,8 @@ Never request or disclose passwords, database URLs, OAuth secrets, private keys,
 
 - Workspace: `N:\PROJECTS\LeetSync`
 - Source repository: `Nitishypujar/LeetSync`
-- PR #6 merged to `main` as `911aaec`. The current local work is on
-  `codex/local-db-safety-guard-2026-10-26`; verify the actual branch and PR
+- PR #6 merged to `main` as `911aaec`; PR #7 merged as `2e72a70`. The local
+  database-target guard is now part of `main`. Verify the actual branch and PR
   status before relying on this snapshot.
 - Local untracked user data observed on 2026-10-20: `LeetSync-source-handoff-20261016-v2.zip`, `LeetSync-source-handoff-20261016.zip`, and `wallpaper_exports/`. Preserve these. Do not stage or delete them.
 - Check current branch/status before any work; newer changes may exist. `.env` files and local DPAPI backup are ignored and must stay out of source control and handoff archives.
