@@ -2,9 +2,10 @@
 
 ## Current release-readiness pass — 2026-10-26
 
-**State: PRs #7 through #9 are merged to `main`; the product is not ready for
+**State: PRs #7 through #10 are merged to `main`; the product is not ready for
 public launch.** PR #5 was merged as `9d1e30c`, PR #6 as `911aaec`, PR #7 as
-`2e72a70`, PR #8 as `de873c3`, and PR #9 as `f66e538`. The latest local
+`2e72a70`, PR #8 as `de873c3`, PR #9 as `f66e538`, and PR #10 as `9b7637e`.
+The latest local
 `npm run ci` on the PR #7 head passed lint, type checks, 71 backend tests, 27
 frontend/extension tests, both production builds, and formatting. Seven
 database integration tests were skipped locally because no disposable
@@ -13,6 +14,23 @@ validation and container-image checks for PRs #7 and #8. PR #9's documentation
 change also passed all four required push and pull-request validation and
 container-image checks. The optional Supabase Preview check was skipped because
 no preview branch is configured.
+
+**Dashboard safety and usability pass (2026-10-26):** the dashboard now offers
+an explicit refresh with its last-checked time, refreshes every 15 seconds only
+while visible, and avoids overlapping data requests. Connection pairing checks
+run every five seconds. The submission summary distinguishes synced, queued,
+failed, and incomplete states, and the empty state describes missing LeetSync
+records without implying that the user has never solved an accepted problem.
+GitHub and LeetCode disconnects now use clear in-product confirmations; account
+data deletion requires typing `DELETE` and explains which GitHub files remain.
+Success notices for sign-out and data deletion remain visible after the user
+returns to the landing screen. A disposable loopback preview verified the
+mobile layout at a 304-pixel viewport, failed/synced history rows, deletion
+confirmation enablement and cancel behavior, and an empty browser console. No
+real account action or hosted system was used. Local `npm run ci` passed lint,
+type checks, 71 backend tests, 34 extension/frontend tests, production builds,
+and formatting; seven database integration tests were skipped because no
+disposable local PostgreSQL database was configured.
 
 The ignored `backend/.env` resolves to a non-local database target. This pass
 adds a local-target guard to development API/worker startup, local encryption

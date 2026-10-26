@@ -5,6 +5,10 @@ import {
   useState,
   type FormEvent,
 } from 'react';
+import {
+  formatDashboardRefreshTime,
+  getSubmissionSyncSummary,
+} from './dashboard-display.mjs';
 import { approvedStoreUrl } from './store-links.mjs';
 
 const API_BASE = (
@@ -77,6 +81,58 @@ type ExtensionRuntime = {
 };
 
 type ErrorSource = 'load' | 'setup' | 'auth' | 'pairing' | 'action';
+type ConfirmationAction = 'github' | 'leetcode' | 'delete';
+
+const DASHBOARD_POLL_INTERVAL_MS = 15_000;
+const EXTENSION_PAIRING_INTERVAL_MS = 5_000;
+
+const CONFIRMATION_DETAILS: Record<
+  ConfirmationAction,
+  {
+    title: string;
+    description: string;
+    details: string[];
+    confirmLabel: string;
+    requiresText?: string;
+    destructive?: boolean;
+  }
+> = {
+  github: {
+    title: 'Disconnect GitHub?',
+    description:
+      'LeetSync will stop writing new solutions until GitHub is connected again.',
+    details: [
+      'Your LeetCode connection and saved LeetSync history will remain.',
+      'Files and commits already in GitHub will not be removed.',
+      'If GitHub cannot be reached to revoke access, remove LeetSync from your GitHub settings.',
+    ],
+    confirmLabel: 'Disconnect GitHub',
+  },
+  leetcode: {
+    title: 'Disconnect LeetCode?',
+    description:
+      'The extension will be unpaired and LeetSync will stop capturing new Accepted submissions.',
+    details: [
+      'Submissions already received by the server may finish syncing.',
+      'Your saved history and files already committed to GitHub will remain.',
+      'Submissions buffered in the extension may send if you reconnect later.',
+    ],
+    confirmLabel: 'Disconnect LeetCode',
+  },
+  delete: {
+    title: 'Delete your LeetSync data?',
+    description:
+      'This permanently removes your LeetSync account and its active stored records.',
+    details: [
+      'Files and commits already in GitHub are not deleted.',
+      'LeetSync will try to revoke provider access; if GitHub is unreachable, remove the app in GitHub settings.',
+      'Type DELETE below to confirm this permanent action.',
+    ],
+    confirmLabel: 'Permanently delete my data',
+    requiresText: 'DELETE',
+    destructive: true,
+  },
+};
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -161,6 +217,105 @@ function Status({ ok, children }: { ok: boolean; children: string }) {
   );
 }
 
+function ConfirmationDialog({
+  action,
+  value,
+  onValueChange,
+  onCancel,
+  onConfirm,
+  busy,
+}: {
+  action: ConfirmationAction | null;
+  value: string;
+  onValueChange: (value: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+  busy: boolean;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const details = action ? CONFIRMATION_DETAILS[action] : null;
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (action && !dialog.open) dialog.showModal();
+    else if (!action && dialog.open) dialog.close();
+  }, [action]);
+
+  const canConfirm =
+    Boolean(details) &&
+    (!details?.requiresText || value === details.requiresText) &&
+    !busy;
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="confirmation-dialog"
+      aria-labelledby="confirmation-title"
+      aria-describedby="confirmation-description"
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onCancel();
+      }}
+    >
+      {details && (
+        <form
+          className={`confirmation-card ${details.destructive ? 'confirmation-card-danger' : ''}`}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (canConfirm) onConfirm();
+          }}
+        >
+          <div className="confirmation-icon" aria-hidden="true">
+            {details.destructive ? '!' : '↗'}
+          </div>
+          <h2 id="confirmation-title">{details.title}</h2>
+          <p id="confirmation-description">{details.description}</p>
+          <ul>
+            {details.details.map((detail) => (
+              <li key={detail}>{detail}</li>
+            ))}
+          </ul>
+          {details.requiresText && (
+            <label className="confirmation-phrase">
+              Confirmation phrase
+              <input
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                value={value}
+                onChange={(event) => onValueChange(event.target.value)}
+                placeholder={details.requiresText}
+                aria-label={`Type ${details.requiresText} to confirm`}
+              />
+            </label>
+          )}
+          <div className="confirmation-actions">
+            <button
+              type="button"
+              className="button button-quiet"
+              onClick={onCancel}
+              autoFocus
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={`button ${details.destructive ? 'button-danger' : 'button-primary'}`}
+              disabled={!canConfirm}
+            >
+              {details.confirmLabel}
+            </button>
+          </div>
+        </form>
+      )}
+    </dialog>
+  );
+}
+
 function App() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -170,19 +325,30 @@ function App() {
   const [username, setUsername] = useState('');
   const [usernameSaved, setUsernameSaved] = useState(false);
   const [extensionAvailable, setExtensionAvailable] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [confirmationAction, setConfirmationAction] =
+    useState<ConfirmationAction | null>(null);
+  const [confirmationText, setConfirmationText] = useState('');
   const errorSource = useRef<ErrorSource | null>(null);
+  const dashboardLoadInProgress = useRef(false);
   const installationVerifyAttempted = useRef(false);
   const pairingInProgress = useRef(false);
   const pairingDone = useRef(false);
   const pairingToken = useRef<string | null>(null);
+  const hasDashboard = dashboard !== null;
 
   const loadDashboard = useCallback(async (initial = false) => {
+    if (dashboardLoadInProgress.current) return;
+    dashboardLoadInProgress.current = true;
+    if (!initial) setRefreshing(true);
     try {
       const bootstrap = await request<{ csrfToken: string }>(
         '/api/auth/bootstrap',
       );
       csrfToken = bootstrap.csrfToken;
       const data = await request<DashboardData>('/api/dashboard');
+      setLastUpdatedAt(Date.now());
       setDashboard(data);
       if (
         errorSource.current === 'load' ||
@@ -228,7 +394,9 @@ function App() {
         setError(friendlyError(loadError));
       }
     } finally {
+      dashboardLoadInProgress.current = false;
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -273,10 +441,24 @@ function App() {
   }, [loadDashboard]);
 
   useEffect(() => {
-    if (!dashboard) return;
-    const timer = window.setInterval(() => void loadDashboard(), 3000);
-    return () => window.clearInterval(timer);
-  }, [dashboard, loadDashboard]);
+    if (!hasDashboard) return;
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadDashboard();
+    };
+    const timer = window.setInterval(
+      refreshWhenVisible,
+      DASHBOARD_POLL_INTERVAL_MS,
+    );
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshWhenVisible);
+    };
+  }, [hasDashboard, loadDashboard]);
 
   useEffect(() => {
     if (!dashboard?.github.connected || !dashboard.leetcode) {
@@ -352,7 +534,10 @@ function App() {
       }
     };
     void attemptPairing();
-    const timer = window.setInterval(() => void attemptPairing(), 3000);
+    const timer = window.setInterval(
+      () => void attemptPairing(),
+      EXTENSION_PAIRING_INTERVAL_MS,
+    );
     return () => {
       stopped = true;
       window.clearInterval(timer);
@@ -419,56 +604,51 @@ function App() {
       setNotice('Signed out. Your saved setup is still here when you return.');
     });
 
-  const disconnectGithub = () => {
-    if (
-      !window.confirm(
-        'Disconnect GitHub from LeetSync? New submissions will no longer sync until you reconnect. Your LeetCode connection, saved submission history, and files already committed to GitHub will remain.',
-      )
-    )
-      return;
-    void run(async () => {
-      const result = await request<{
-        providerRevoked: boolean;
-        appInstallationRemoved?: boolean | null;
-      }>('/api/auth/disconnect-github', { method: 'POST', body: '{}' });
-      setNotice(
-        result.providerRevoked || result.appInstallationRemoved === true
-          ? 'GitHub disconnected.'
-          : 'GitHub disconnected in LeetSync. If the app could not be reached, remove LeetSync from GitHub settings too.',
-      );
-    });
+  const openConfirmation = (action: ConfirmationAction) => {
+    setConfirmationText('');
+    setConfirmationAction(action);
   };
 
-  const disconnectLeetcode = () => {
-    if (
-      !window.confirm(
-        'Disconnect LeetCode from LeetSync? The extension will be unpaired and no new submissions will be collected. Submissions already received may finish syncing, and locally buffered submissions may send if you reconnect later. Your saved history and files already committed to GitHub will remain.',
-      )
-    )
-      return;
-    void run(async () => {
-      await request('/api/leetcode/disconnect', {
-        method: 'POST',
-        body: '{}',
-      });
-      pairingDone.current = false;
-      setNotice('LeetCode disconnected. Your saved history was kept.');
-    });
-  };
+  const confirmPendingAction = () => {
+    const action = confirmationAction;
+    if (!action) return;
+    if (action === 'delete' && confirmationText !== 'DELETE') return;
 
-  const deleteData = () => {
-    if (
-      !window.confirm(
-        'Delete your LeetSync account, submissions, and settings?',
-      )
-    )
-      return;
+    setConfirmationAction(null);
+    setConfirmationText('');
     void run(async () => {
+      if (action === 'github') {
+        const result = await request<{
+          providerRevoked: boolean;
+          appInstallationRemoved?: boolean | null;
+        }>('/api/auth/disconnect-github', { method: 'POST', body: '{}' });
+        setNotice(
+          result.providerRevoked || result.appInstallationRemoved === true
+            ? 'GitHub disconnected.'
+            : 'GitHub disconnected in LeetSync. If the app could not be reached, remove LeetSync from GitHub settings too.',
+        );
+        return;
+      }
+
+      if (action === 'leetcode') {
+        await request('/api/leetcode/disconnect', {
+          method: 'POST',
+          body: '{}',
+        });
+        pairingDone.current = false;
+        setNotice('LeetCode disconnected. Your saved history was kept.');
+        return;
+      }
+
       await request('/api/data/delete', { method: 'POST', body: '{}' });
       setDashboard(null);
       setNotice('Your LeetSync data was deleted.');
     });
   };
+
+  const disconnectGithub = () => openConfirmation('github');
+  const disconnectLeetcode = () => openConfirmation('leetcode');
+  const deleteData = () => openConfirmation('delete');
 
   if (loading) {
     return (
@@ -491,6 +671,14 @@ function App() {
           </a>
           <span className="muted">Your solutions, in sync</span>
         </header>
+        {notice && (
+          <p className="notice landing-notice" role="status" aria-live="polite">
+            {notice}
+            <button onClick={() => setNotice('')} aria-label="Dismiss">
+              ×
+            </button>
+          </p>
+        )}
         <section className="hero">
           <div>
             <p className="eyebrow">AUTOMATIC SOLUTION SYNC</p>
@@ -538,6 +726,10 @@ function App() {
   const queued =
     (dashboard.counts.jobs.pending ?? 0) + (dashboard.counts.jobs.running ?? 0);
   const usernameLinked = Boolean(dashboard.leetcode?.connected);
+  const syncSummary = getSubmissionSyncSummary(
+    dashboard.counts.total,
+    dashboard.counts.jobs,
+  );
 
   return (
     <main className="app-shell">
@@ -570,9 +762,24 @@ function App() {
               Setup is saved to your account and restored when you return.
             </p>
           </div>
-          <span className="live-label">
-            <i /> Live status
-          </span>
+          <div className="refresh-actions">
+            <span className="refresh-timestamp">
+              {lastUpdatedAt === null
+                ? 'Status not checked yet'
+                : `Updated ${formatDashboardRefreshTime(lastUpdatedAt)}`}
+            </span>
+            <button
+              type="button"
+              className="live-label refresh-button"
+              onClick={() => void loadDashboard()}
+              disabled={refreshing}
+              aria-label="Refresh dashboard status"
+            >
+              <i className={refreshing ? 'refreshing' : ''} />
+              {refreshing ? 'Refreshing' : 'Refresh status'}
+              <span aria-hidden="true">↻</span>
+            </button>
+          </div>
         </div>
 
         {notice && (
@@ -769,16 +976,10 @@ function App() {
               </span>
             </div>
             <div className="check-row">
-              <Status ok={dashboard.counts.total > 0}>
-                {dashboard.counts.total > 0
-                  ? 'Submissions syncing automatically'
-                  : 'Waiting for first accepted submission'}
+              <Status ok={syncSummary.state === 'synced'}>
+                {syncSummary.label}
               </Status>
-              <span>
-                {dashboard.counts.total > 0
-                  ? `${dashboard.counts.total} accepted submission${dashboard.counts.total === 1 ? '' : 's'} synced`
-                  : 'Your first Accepted result will sync automatically'}
-              </span>
+              <span>{syncSummary.detail}</span>
             </div>
           </div>
 
@@ -840,10 +1041,12 @@ function App() {
           </div>
           {dashboard.submissions.length === 0 ? (
             <div className="empty-state">
-              <strong>No accepted submissions yet</strong>
+              <strong>No submissions are recorded here yet</strong>
               <p>
-                Keep LeetCode open with the extension installed. An Accepted
-                result will appear here and sync automatically.
+                LeetSync only shows Accepted results captured after the browser
+                extension is connected. Open LeetCode in the profile with the
+                extension installed, then refresh this dashboard after a new
+                Accepted result.
               </p>
             </div>
           ) : (
@@ -941,6 +1144,17 @@ function App() {
           <a href="/support">Support</a>
         </footer>
       </div>
+      <ConfirmationDialog
+        action={confirmationAction}
+        value={confirmationText}
+        onValueChange={setConfirmationText}
+        onCancel={() => {
+          setConfirmationAction(null);
+          setConfirmationText('');
+        }}
+        onConfirm={confirmPendingAction}
+        busy={busy}
+      />
     </main>
   );
 }
