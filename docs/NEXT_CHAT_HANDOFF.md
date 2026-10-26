@@ -12,9 +12,9 @@ Never request or disclose passwords, database URLs, OAuth secrets, private keys,
 
 - Workspace: `N:\PROJECTS\LeetSync`
 - Source repository: `Nitishypujar/LeetSync`
-- PR #6 merged to `main` as `911aaec`; PR #7 merged as `2e72a70`. The local
-  database-target guard is now part of `main`. Verify the actual branch and PR
-  status before relying on this snapshot.
+- PR #6 merged to `main` as `911aaec`; PR #7 as `2e72a70`; PR #8 as `de873c3`.
+  The local database-target guard and updated release checklist are part of
+  `main`. Verify the actual branch and PR status before relying on this snapshot.
 - Local untracked user data observed on 2026-10-20: `LeetSync-source-handoff-20261016-v2.zip`, `LeetSync-source-handoff-20261016.zip`, and `wallpaper_exports/`. Preserve these. Do not stage or delete them.
 - Check current branch/status before any work; newer changes may exist. `.env` files and local DPAPI backup are ignored and must stay out of source control and handoff archives.
 
@@ -22,9 +22,9 @@ Never request or disclose passwords, database URLs, OAuth secrets, private keys,
 
 - Render service: `leetsync-nitishypujar`, URL `https://leetsync-nitishypujar.onrender.com`, service ID `srv-dbb5kn8473hc73cnese0`, workspace ID `tea-dai0rvks728c73dtsfh0`.
 - Render service `leetsync-nitishypujar` is on the free plan in Singapore, one instance, health path `/health`; dashboard/API/worker are co-hosted and auto-deploy is disabled. Read-only status on 2026-10-26 showed the service still follows `codex/release-readiness-2026-10-19` and has live commit `13c1686f843ffaf315db57430164b3715c3ee5ee` (`dep-dbf584gae00c73eqst10`). `/health` returned `{"status":"ok","service":"leetsync-api","version":"0.1.0"}` after cold start. Newer `main` changes are not deployed. Check provider state rather than relying on this snapshot; a live health response alone is not a full end-to-end test.
-- Supabase project `LeetSync-Dev` (`xalhreuurwzqjuzwfyun`) is in Singapore (`ap-southeast-1`). Password rotation was reported by the owner. Its schema was backed up locally using Windows DPAPI, migration history was reconciled, and all six Prisma migrations applied after explicit approval. The local backup is account-bound; it is not off-site disaster recovery. Never use this hosted project for tests or repeat baseline operations.
+- Supabase project `LeetSync-Dev` (`xalhreuurwzqjuzwfyun`) is in Singapore (`ap-southeast-1`). Password rotation was reported by the owner. Its schema was backed up locally using Windows DPAPI, migration history was reconciled, and the first six Prisma migrations were applied after explicit approval. PR #7 adds a seventh RLS migration for `_prisma_migrations`; it remains unapplied to the hosted database. The local backup is account-bound; it is not off-site disaster recovery. Never use this hosted project for tests or repeat baseline operations.
 - GitHub App `LeetSync Nitishypujar` is registered, authorized, and installed only for `Nitishypujar/leetcode-solutions`. The App has metadata read access and repository creation write permission in user authorization; installation is selected-repository only with Contents write. Do not expand access.
-- The hosted dashboard previously showed GitHub, canonical repository, extension, and LeetCode identity connected. A latest real submission had not yet been verified in the hosted service at the last handoff.
+- Read-only dashboard check on 2026-10-26 showed the account/repository connected and LeetCode identity detected, but 0 accepted/synced entries and extension last seen Oct 20. This conflicts with the owner's 2026-10-15 screenshot of five synced submissions. Cause is unknown; do not repair or recreate data without explicit owner approval.
 
 ## Previous verification evidence
 

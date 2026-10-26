@@ -2,15 +2,15 @@
 
 ## Current release-readiness pass — 2026-10-26
 
-**State: PR #7 and the release-readiness changes are merged to `main` as
-`2e72a70`; not ready for public launch.** PR #5 was merged as `9d1e30c`, PR #6
-as `911aaec`, and PR #7 as `2e72a70`. The latest local `npm run ci` on the
-PR #7 head passed lint, type checks, 71 backend tests, 27 frontend/extension
-tests, both production builds, and formatting. Seven database integration
-tests were skipped locally because no disposable PostgreSQL database was
-configured; GitHub Actions passed its database-backed validation and container
-image checks. The optional Supabase Preview check was skipped because no
-preview branch is configured.
+**State: PR #7 and #8 are merged to `main`; not ready for public launch.** PR #5
+was merged as `9d1e30c`, PR #6 as `911aaec`, PR #7 as `2e72a70`, and PR #8 as
+`de873c3`. The latest local `npm run ci` on the PR #7 head passed lint, type
+checks, 71 backend tests, 27 frontend/extension tests, both production builds,
+and formatting. Seven database integration tests were skipped locally because
+no disposable PostgreSQL database was configured; GitHub Actions passed its
+database-backed validation and container-image checks for PRs #7 and #8. The
+optional Supabase Preview check was skipped because no preview branch is
+configured.
 
 The ignored `backend/.env` resolves to a non-local database target. This pass
 adds a local-target guard to development API/worker startup, local encryption
@@ -40,12 +40,13 @@ passed `/support`, `/privacy`, and `/terms`; the unknown extensionless route
 was verified after PR #2. The policy pages remain drafts requiring lawyer
 review.
 
-**Live-history finding:** the last recorded owner-authenticated dashboard API
-check returned zero submissions. This conflicts with the owner-provided
-2026-10-15 dashboard capture showing five accepted, synced submissions. The
-live database has not been rechecked in this pass, and no data was repaired or
-fabricated. The cause and any recoverable source remain unverified. This must
-be resolved before public release.
+**Live-history finding (read-only, 2026-10-26):** the currently deployed
+dashboard was authenticated as `@Nitishypujar` and showed 0 accepted, queued,
+synced, or failed submissions; it said the extension was last seen on Oct 20.
+This conflicts with the owner-provided 2026-10-15 dashboard capture showing
+five accepted, synced submissions. The cause and any recoverable source remain
+unverified. No data was repaired, created, or deleted. Resolve this discrepancy
+before public release; any data repair requires explicit owner approval.
 
 **Live-route finding:** the first post-merge deploy returned `Cannot GET` for an
 unknown page. PR #2 corrected the SPA fallback to serve extensionless frontend
@@ -181,8 +182,8 @@ LeetSync's release code is merged to `main`, while the last verified Render prev
    tests. Do not bypass this guard to access hosted Supabase; any hosted
    migration remains separately gated by an independently stored backup,
    restore rehearsal, and deployment review.
-2. **Create a production recovery plan and apply the pending RLS migration.** The current preview database is the existing Supabase Dev project and its schema migrations are complete. Its verified DPAPI backup is local and Windows-account-bound, not an independent recovery copy. Before real multi-user use, establish provider backups or encrypted off-site exports, rehearse a restore into an isolated database, review the new migration, and apply it to the hosted database. Confirm the advisor warning clears and the Prisma owner can still deploy migrations.
-3. **Finish live end-to-end verification.** GitHub App authorization and installation are already verified against the deployed service, and the installation is restricted to `leetcode-solutions`. The current live submission history was not queried in this pass. Verify the existing owner-submitted Accepted entry against exactly one commit and `SYNCED` record first; use a new real submission only if the earlier user-shared evidence cannot be reproduced, then check retry/disconnect behavior non-destructively.
+2. **Create a production recovery plan and apply the pending RLS migration.** The existing Supabase Dev project had its first six Prisma migrations applied; PR #7 adds a seventh migration protecting `public._prisma_migrations`, which has not been applied to the hosted database. Its verified DPAPI backup is local and Windows-account-bound, not an independent recovery copy. Before a hosted migration, establish provider backups or encrypted off-site exports, rehearse a restore into an isolated database, review the migration, and obtain explicit approval. Then confirm the advisor warning clears and the Prisma owner can still deploy migrations.
+3. **Resolve live history and finish end-to-end verification.** The authenticated dashboard showed 0 submissions on 2026-10-26, conflicting with the owner's 2026-10-15 capture of five synced entries. Determine the intended account/data source read-only first. Do not repair or recreate records without explicit owner approval. Then verify one genuine Accepted submission has exactly one `SYNCED` row and expected commit, and check retry/disconnect behavior non-destructively.
 4. **Complete an independent security review.** Recheck the production threat model, OAuth/App permissions, extension permissions, rate limits, logging and data deletion paths before opening signups. Automated tests and a clean dependency audit do not establish that the service is unbreachable.
 5. **Choose dependable production hosting.** The current Render free preview is deployed. For public launch, select an always-on plan, reliable worker arrangement, database backups/restore, alerting, and a custom domain; keep one API instance until rate limiting uses a shared store.
 6. **Finish launch materials and extension distribution.** The dashboard now has a first-run official-store setup panel; the Chrome and Edge listing URLs remain unset until their listings are approved. Obtain qualified legal review, establish and document a recoverable backup/restore policy, configure the production domain, submit the packaged extension for store review, add the approved listing URLs to the frontend build, and test the store install plus full flow in a clean profile on that domain.
