@@ -12,9 +12,12 @@ GitHub Actions workflow configures disposable PostgreSQL, applies migrations,
 and enables those tests.
 
 The first PR #6 Actions run passed but reported that its workflow actions still
-targeted Node 20. PR #6 also updates `actions/checkout`, `actions/setup-node`,
-and `docker/setup-buildx-action` to Node 24-compatible releases; the final
-Actions run for that revision must pass before merge.
+targeted Node 20. PR #6 updates `actions/checkout`, `actions/setup-node`, and
+`docker/setup-buildx-action` to Node 24-compatible releases. The updated
+workflow passed its validation and container-image jobs for both push and pull
+request events. The optional Supabase Preview check was skipped because this
+branch has no linked Supabase preview branch. GitHub also reported a
+non-blocking `ubuntu-latest` migration notice.
 
 Render auto-deploy is disabled. The last verified preview is still commit
 `13c1686f843ffaf315db57430164b3715c3ee5ee` (deployment
